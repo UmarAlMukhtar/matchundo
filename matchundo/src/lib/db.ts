@@ -1,5 +1,7 @@
 import { prisma } from './prisma';
-import { Screening as PrismaScreening, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+
+type PrismaScreening = Prisma.ScreeningGetPayload<{}>;
 
 export interface Screening {
   id: string;
