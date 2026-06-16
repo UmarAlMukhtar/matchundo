@@ -64,12 +64,14 @@ export default function SubmissionsPanel({ initialScreenings, initialTab = "pend
       : "pending") as "pending" | "approved" | "rejected"
   );
 
-  // Sync state if initialTab changes on server
-  useEffect(() => {
+  const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
+
+  if (initialTab !== prevInitialTab) {
+    setPrevInitialTab(initialTab);
     if (initialTab === "approved" || initialTab === "rejected" || initialTab === "pending") {
       setActiveTab(initialTab as "pending" | "approved" | "rejected");
     }
-  }, [initialTab]);
+  }
 
   const handleTabChange = (tab: "pending" | "approved" | "rejected") => {
     setActiveTab(tab);
