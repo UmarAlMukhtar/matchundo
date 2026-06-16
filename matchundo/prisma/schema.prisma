@@ -1,0 +1,22 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Screening {
+  id                String   @id @default(uuid()) @db.Uuid
+  matchName         String   @map("match_name")
+  venueName         String   @map("venue_name")
+  city              String
+  address           String
+  screeningDatetime DateTime @map("screening_datetime")
+  description       String?
+  posterImageUrl    String?  @map("poster_image_url")
+  googleMapsLink    String?  @map("google_maps_link")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("screenings")
+}
