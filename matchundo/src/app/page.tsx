@@ -41,35 +41,36 @@ export default async function HomePage() {
     <div className="flex flex-col items-center justify-start flex-1 w-full pb-20">
       
       {/* Hero Section */}
-      <section className="relative w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center flex flex-col items-center">
+      <section className="relative w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20 text-center flex flex-col items-center">
         
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-medium mb-6">
-          <Play className="h-3 w-3 text-emerald-500 fill-emerald-500" /> FIFA World Cup Screenings
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-zinc-900 border border-zinc-900 text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-6">
+          <Play className="h-2.5 w-2.5 text-emerald-500 fill-emerald-500" /> Watch Screenings Kerala
         </div>
         
-        <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl max-w-2xl mx-auto leading-tight mb-4">
+        <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl max-w-xl mx-auto leading-tight mb-3">
           Find World Cup Screenings Near You
         </h1>
         
-        <p className="text-sm sm:text-base text-zinc-400 max-w-xl mx-auto mb-8 leading-relaxed">
-          Discover public watch parties, outdoor screenings, and venues broadcasting matches live across Kerala.
+        <p className="text-xs sm:text-sm text-zinc-450 max-w-md mx-auto mb-8 leading-relaxed">
+          Discover public watch parties, outdoor screenings, and local venues broadcasting matches live across Kerala.
         </p>
 
         {/* Search Input Bar */}
-        <div className="w-full max-w-lg mx-auto bg-zinc-950 p-1.5 rounded-xl border border-zinc-850 shadow-md mb-6">
-          <form action="/screenings" method="GET" className="flex flex-col sm:flex-row gap-2">
+        <div className="w-full max-w-md mx-auto bg-zinc-950 p-1 rounded-xl border border-zinc-900 mb-6">
+          <form action="/screenings" method="GET" className="flex gap-2">
             <div className="flex-1 relative flex items-center">
-              <Search className="absolute left-3.5 text-zinc-550 h-4 w-4" />
+              <Search className="absolute left-3 text-zinc-650 h-3.5 w-3.5" />
               <Input
                 type="text"
                 name="search"
                 placeholder="Search by city or match name..."
-                className="w-full bg-transparent pl-10 pr-3 py-2 border-none focus-visible:ring-0 text-sm shadow-none"
+                className="w-full bg-transparent pl-9 pr-3 py-1.5 border-none focus-visible:ring-0 text-xs shadow-none"
               />
             </div>
             <Button
               type="submit"
-              className="bg-zinc-100 text-zinc-900 font-semibold text-xs h-9 px-4 active:scale-95 transition-all shrink-0"
+              size="sm"
+              className="bg-zinc-100 text-zinc-950 font-semibold h-8 text-[11px]"
             >
               Search
             </Button>
@@ -77,13 +78,13 @@ export default async function HomePage() {
         </div>
 
         {/* City Filter Links */}
-        <div className="flex flex-wrap items-center justify-center gap-1.5 text-xs text-zinc-500">
-          <span>Browse cities:</span>
+        <div className="flex flex-wrap items-center justify-center gap-1.5 text-[11px] text-zinc-500">
+          <span>Featured:</span>
           {featuredCities.map((city) => (
             <Link
               key={city}
               href={`/screenings?city=${city}`}
-              className="px-2.5 py-1 rounded-md bg-zinc-900/60 border border-zinc-850 text-zinc-300 hover:text-white hover:border-zinc-700 transition-colors"
+              className="px-2 py-0.5 rounded border border-zinc-900 bg-zinc-950 text-zinc-450 hover:text-white hover:border-zinc-800 transition-colors"
             >
               {city}
             </Link>
@@ -92,21 +93,21 @@ export default async function HomePage() {
       </section>
 
       {/* Upcoming Screenings Grid */}
-      <section className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mt-6">
-        <div className="flex items-center justify-between border-b border-zinc-900 pb-4 mb-6">
+      <section className="w-full max-w-5xl px-4 sm:px-6 lg:px-8 mt-4">
+        <div className="flex items-center justify-between border-b border-zinc-900 pb-3 mb-6">
           <div>
-            <h2 className="text-lg font-bold text-white tracking-tight">
-              Upcoming Screenings
+            <h2 className="text-sm font-bold text-white tracking-tight">
+              Upcoming Match Watch Parties
             </h2>
-            <p className="text-zinc-500 text-xs mt-0.5">
-              Watch parties scheduled across football hotspots.
+            <p className="text-zinc-500 text-[10px] mt-0.5">
+              Live screenings scheduled across football hotspots.
             </p>
           </div>
           <Link
             href="/screenings"
-            className="group flex items-center gap-1 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
+            className="group flex items-center gap-0.5 text-[11px] font-semibold text-zinc-455 hover:text-zinc-200 transition-colors"
           >
-            View all screenings ({allScreenings.length})
+            View all ({allScreenings.length})
             <ArrowRight className="h-3 w-3 transform transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
@@ -116,9 +117,9 @@ export default async function HomePage() {
             {upcomingScreenings.map((screening) => {
               const { dateStr, timeStr } = formatScreeningDate(screening.screening_datetime);
               return (
-                <Card key={screening.id} className="flex flex-col h-full overflow-hidden hover:border-zinc-700 border-zinc-850">
+                <Card key={screening.id} className="flex flex-col h-full overflow-hidden border-zinc-900 hover:border-zinc-850">
                   {/* Poster Image Area */}
-                  <div className="relative h-44 w-full bg-zinc-900 border-b border-zinc-900 overflow-hidden flex items-center justify-center">
+                  <div className="relative h-40 w-full bg-zinc-950 border-b border-zinc-900 overflow-hidden flex items-center justify-center">
                     {screening.poster_image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -127,50 +128,50 @@ export default async function HomePage() {
                         className="object-cover w-full h-full"
                       />
                     ) : (
-                      /* Minimal text-based banner matching Notion style */
-                      <div className="absolute inset-0 flex flex-col justify-between p-5 bg-zinc-950">
-                        <div className="flex justify-between items-center text-[9px] text-zinc-500 font-bold uppercase tracking-wider">
-                          <span>Screening</span>
-                          <span className="text-emerald-500 font-semibold">Live</span>
+                      /* Minimal text-based banner */
+                      <div className="absolute inset-0 flex flex-col justify-between p-4 bg-zinc-950/40">
+                        <div className="flex justify-between items-center text-[9px] text-zinc-550 font-bold uppercase tracking-wider">
+                          <span>Live Broadcast</span>
+                          <span className="text-emerald-500 font-medium lowercase tracking-normal">scheduled</span>
                         </div>
                         
-                        <div className="text-left py-2">
-                          <p className="text-sm font-bold text-white tracking-tight uppercase line-clamp-2">
+                        <div className="text-left py-1">
+                          <p className="text-xs font-bold text-zinc-100 leading-snug uppercase line-clamp-2">
                             {screening.match_name.split(' - ')[0]}
                           </p>
                           {screening.match_name.split(' - ')[1] && (
-                            <p className="text-[10px] text-zinc-400 mt-0.5">
+                            <p className="text-[9px] text-zinc-500 mt-0.5">
                               {screening.match_name.split(' - ')[1]}
                             </p>
                           )}
                         </div>
                         
-                        <div className="text-[10px] text-zinc-500 truncate">
-                          At {screening.venue_name}
+                        <div className="text-[9px] text-zinc-550 truncate">
+                          Venue: {screening.venue_name}
                         </div>
                       </div>
                     )}
                   </div>
 
                   {/* Card Content */}
-                  <CardHeader className="p-5 flex-1 flex flex-col justify-between">
+                  <CardHeader className="p-4 flex-1 flex flex-col justify-between">
                     <div>
-                      <CardTitle className="text-base line-clamp-1">{screening.match_name}</CardTitle>
-                      <CardDescription className="text-xs text-zinc-400 mt-1 flex items-center gap-1">
-                        <span>Venue:</span> <span className="text-zinc-200">{screening.venue_name}</span>
+                      <CardTitle className="text-xs font-bold leading-tight line-clamp-1">{screening.match_name}</CardTitle>
+                      <CardDescription className="text-[11px] text-zinc-500 mt-1 flex items-center gap-1">
+                        <span>Venue:</span> <span className="text-zinc-350">{screening.venue_name}</span>
                       </CardDescription>
 
-                      <div className="mt-4 pt-4 border-t border-zinc-900 flex flex-col gap-2 text-xs text-zinc-400">
+                      <div className="mt-4 pt-3.5 border-t border-zinc-900/60 flex flex-col gap-2 text-[11px] text-zinc-450">
                         <div className="flex items-center gap-2">
-                          <MapPin className="h-3.5 w-3.5 text-zinc-500" />
+                          <MapPin className="h-3.5 w-3.5 text-zinc-650" />
                           <span>{screening.city}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-3.5 w-3.5 text-zinc-500" />
+                          <Calendar className="h-3.5 w-3.5 text-zinc-650" />
                           <span>{dateStr}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Clock className="h-3.5 w-3.5 text-zinc-500" />
+                          <Clock className="h-3.5 w-3.5 text-zinc-650" />
                           <span>{timeStr}</span>
                         </div>
                       </div>
@@ -178,8 +179,8 @@ export default async function HomePage() {
 
                     <CardContent className="p-0 mt-5">
                       <Link href={`/screenings/${screening.id}`}>
-                        <Button variant="outline" className="w-full text-xs font-semibold py-2">
-                          View details
+                        <Button variant="outline" size="sm" className="w-full text-xs font-semibold">
+                          View Details
                         </Button>
                       </Link>
                     </CardContent>
@@ -189,14 +190,14 @@ export default async function HomePage() {
             })}
           </div>
         ) : (
-          <Card className="p-10 text-center max-w-md mx-auto flex flex-col items-center border-zinc-850">
-            <h3 className="text-sm font-bold text-white mb-1">No upcoming screenings</h3>
-            <p className="text-zinc-500 text-xs mb-4">
-              There are no screenings scheduled at this moment.
+          <Card className="p-10 text-center max-w-sm mx-auto flex flex-col items-center border-zinc-900">
+            <h3 className="text-xs font-bold text-white mb-1">No screenings available</h3>
+            <p className="text-zinc-500 text-[11px] mb-4">
+              There are no live screenings scheduled at this time.
             </p>
             <Link href="/admin">
-              <Button size="sm" variant="outline" className="text-xs">
-                Manage screenings
+              <Button size="sm" variant="outline" className="text-xs font-semibold">
+                Go to Dashboard
               </Button>
             </Link>
           </Card>
@@ -204,24 +205,24 @@ export default async function HomePage() {
       </section>
 
       {/* Info Promo Section */}
-      <section className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mt-16">
-        <div className="rounded-xl border border-zinc-850 p-6 sm:p-8 bg-zinc-950/40">
-          <div className="max-w-xl">
-            <h2 className="text-base font-bold text-white mb-2">
-              Community Watch Parties
+      <section className="w-full max-w-5xl px-4 sm:px-6 lg:px-8 mt-12">
+        <div className="rounded-lg border border-zinc-900 p-5 bg-zinc-950/40">
+          <div className="max-w-lg">
+            <h2 className="text-xs font-bold text-white mb-1.5 uppercase tracking-wide">
+              Kerala Football Watch Parties
             </h2>
-            <p className="text-xs sm:text-sm text-zinc-450 leading-relaxed mb-4">
-              MatchUndo coordinates public venues, sports clubs, and neighborhood beach screenings displaying matches live in Kerala. Gather with local supporters to experience the game together.
+            <p className="text-[11px] text-zinc-500 leading-relaxed mb-4">
+              MatchUndo index watch parties, public screenings, beach screens, and local stadium venues broadcasting matches in Kerala. Discover screenings in your local neighborhood and join the community.
             </p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2.5">
               <Link href="/screenings">
                 <Button size="sm" variant="default" className="text-xs font-semibold">
-                  Browse matches
+                  Browse Watch Listings
                 </Button>
               </Link>
               <Link href="/admin">
-                <Button size="sm" variant="outline" className="text-xs font-semibold">
-                  Dashboard
+                <Button size="sm" variant="outline" className="text-xs font-semibold border-zinc-900">
+                  Manage Panel
                 </Button>
               </Link>
             </div>

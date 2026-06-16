@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Screening } from '@/lib/db';
 import {
   loginAdmin,
@@ -20,7 +20,9 @@ import {
   Lock,
   X,
   ExternalLink,
-  Loader2
+  Loader2,
+  CheckCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +33,19 @@ import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/ca
 interface AdminPanelProps {
   initialAuthenticated: boolean;
   initialScreenings: Screening[];
+}
+
+interface ValidationErrors {
+  matchName?: string;
+  venueName?: string;
+  city?: string;
+  address?: string;
+  screeningDatetime?: string;
+}
+
+interface ToastMessage {
+  type: 'success' | 'error';
+  text: string;
 }
 
 // Helper to convert date to YYYY-MM-DDThh:mm format for datetime-local input
@@ -62,7 +77,15 @@ export default function AdminPanel({
   const [showModal, setShowModal] = useState(false);
   const [editingScreening, setEditingScreening] = useState<Screening | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [formError, setFormError] = useState('');
+  
+  // Custom delete confirmation modal state
+  const [confirmDeleteScreening, setConfirmDeleteScreening] = useState<Screening | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Custom Toast state
+  const [toast, setToast] = useState<ToastMessage | null>(null);
 
   // Form Fields
   const [matchName, setMatchName] = useState('');
@@ -73,6 +96,18 @@ export default function AdminPanel({
   const [description, setDescription] = useState('');
   const [posterImageUrl, setPosterImageUrl] = useState('');
   const [googleMapsLink, setGoogleMapsLink] = useState('');
+
+  // Auto-dismiss toasts after 3 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const triggerToast = (type: 'success' | 'error', text: string) => {
+    setToast({ type, text });
+  };
 
   // Handle Admin Password Login
   const handleLogin = async (e: React.FormEvent) => {
@@ -85,12 +120,14 @@ export default function AdminPanel({
       const result = await loginAdmin(password);
       if (result.success) {
         setIsAuthenticated(true);
+        triggerToast('success', 'Logged in successfully.');
       } else {
         setLoginError(result.error || 'Login failed.');
+        triggerToast('error', result.error || 'Login failed.');
       }
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch {
       setLoginError('Error connecting to authentication action.');
+      triggerToast('error', 'Error connecting to authentication action.');
     } finally {
       setIsLoggingIn(false);
     }
@@ -98,14 +135,13 @@ export default function AdminPanel({
 
   // Handle Admin Logout
   const handleLogout = async () => {
-    if (confirm('Are you sure you want to logout?')) {
-      try {
-        await logoutAdmin();
-        setIsAuthenticated(false);
-        setPassword('');
-      } catch (error) {
-        console.error('Logout error:', error);
-      }
+    try {
+      await logoutAdmin();
+      setIsAuthenticated(false);
+      setPassword('');
+      triggerToast('success', 'Logged out successfully.');
+    } catch {
+      triggerToast('error', 'Logout action failed.');
     }
   };
 
@@ -120,6 +156,7 @@ export default function AdminPanel({
     setDescription('');
     setPosterImageUrl('');
     setGoogleMapsLink('');
+    setValidationErrors({});
     setFormError('');
     setShowModal(true);
   };
@@ -135,6 +172,7 @@ export default function AdminPanel({
     setDescription(screening.description);
     setPosterImageUrl(screening.poster_image_url || '');
     setGoogleMapsLink(screening.google_maps_link || '');
+    setValidationErrors({});
     setFormError('');
     setShowModal(true);
   };
@@ -143,29 +181,40 @@ export default function AdminPanel({
   const closeModal = () => {
     setShowModal(false);
     setEditingScreening(null);
+    setFormError('');
   };
 
   // Handle Form Submission (Save Create / Update)
   const handleSaveScreening = async (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationErrors({});
     setFormError('');
     setIsSaving(true);
 
-    if (!matchName || !venueName || !city || !address || !screeningDatetime) {
-      setFormError('Please fill in all required fields.');
+    // Dynamic field validation
+    const errors: ValidationErrors = {};
+    if (!matchName.trim()) errors.matchName = 'Match name is required.';
+    if (!venueName.trim()) errors.venueName = 'Venue name is required.';
+    if (!city.trim()) errors.city = 'City selection is required.';
+    if (!address.trim()) errors.address = 'Full address is required.';
+    if (!screeningDatetime) errors.screeningDatetime = 'Date and time are required.';
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       setIsSaving(false);
+      triggerToast('error', 'Please resolve form errors.');
       return;
     }
 
     const payload = {
-      match_name: matchName,
-      venue_name: venueName,
-      city,
-      address,
+      match_name: matchName.trim(),
+      venue_name: venueName.trim(),
+      city: city.trim(),
+      address: address.trim(),
       screening_datetime: new Date(screeningDatetime).toISOString(),
-      description,
-      poster_image_url: posterImageUrl,
-      google_maps_link: googleMapsLink
+      description: description.trim(),
+      poster_image_url: posterImageUrl.trim(),
+      google_maps_link: googleMapsLink.trim()
     };
 
     try {
@@ -175,41 +224,49 @@ export default function AdminPanel({
           setScreenings(prev =>
             prev.map(s => (s.id === editingScreening.id ? result.screening! : s))
           );
+          triggerToast('success', 'Screening updated successfully.');
           closeModal();
         } else {
           setFormError(result.error || 'Failed to update screening.');
+          triggerToast('error', result.error || 'Failed to update screening.');
         }
       } else {
         const result = await createScreeningAction(payload);
         if (result.success && result.screening) {
           setScreenings(prev => [result.screening!, ...prev]);
+          triggerToast('success', 'Screening created successfully.');
           closeModal();
         } else {
           setFormError(result.error || 'Failed to create screening.');
+          triggerToast('error', result.error || 'Failed to create screening.');
         }
       }
-    } catch (error) {
-      console.error('Save screening error:', error);
+    } catch {
       setFormError('An error occurred while saving.');
+      triggerToast('error', 'An error occurred while saving.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Handle Screening Delete
-  const handleDeleteScreening = async (id: string, matchNameText: string) => {
-    if (confirm(`Are you sure you want to delete the screening for "${matchNameText}"?`)) {
-      try {
-        const result = await deleteScreeningAction(id);
-        if (result.success) {
-          setScreenings(prev => prev.filter(s => s.id !== id));
-        } else {
-          alert(result.error || 'Failed to delete screening.');
-        }
-      } catch (error) {
-        console.error('Delete screening error:', error);
-        alert('An error occurred during deletion.');
+  // Handle Delete screening action execution
+  const executeDeleteScreening = async () => {
+    if (!confirmDeleteScreening) return;
+    setIsDeleting(true);
+    
+    try {
+      const result = await deleteScreeningAction(confirmDeleteScreening.id);
+      if (result.success) {
+        setScreenings(prev => prev.filter(s => s.id !== confirmDeleteScreening.id));
+        triggerToast('success', 'Screening deleted successfully.');
+      } else {
+        triggerToast('error', result.error || 'Failed to delete screening.');
       }
+    } catch {
+      triggerToast('error', 'An error occurred during deletion.');
+    } finally {
+      setIsDeleting(false);
+      setConfirmDeleteScreening(null);
     }
   };
 
@@ -217,12 +274,12 @@ export default function AdminPanel({
   if (!isAuthenticated) {
     return (
       <div className="flex-1 flex items-center justify-center py-20 px-4 sm:px-6 lg:px-8">
-        <Card className="max-w-md w-full p-8 border-zinc-850 relative">
+        <Card className="max-w-md w-full p-8 border-zinc-900 shadow-sm relative">
           <div className="text-center mb-8 flex flex-col items-center">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-900 border border-zinc-850 text-zinc-400 mb-4">
-              <Lock className="h-5 w-5" />
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-900 border border-zinc-900 text-zinc-400 mb-4">
+              <Lock className="h-4.5 w-4.5" />
             </span>
-            <CardTitle className="text-xl">
+            <CardTitle className="text-lg">
               Admin Login
             </CardTitle>
             <CardDescription className="mt-1">
@@ -230,9 +287,9 @@ export default function AdminPanel({
             </CardDescription>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-550 mb-1.5">
                 Password
               </label>
               <Input
@@ -241,7 +298,7 @@ export default function AdminPanel({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-zinc-950"
+                className="w-full bg-zinc-950 border-zinc-900"
               />
             </div>
 
@@ -252,11 +309,11 @@ export default function AdminPanel({
             <Button
               type="submit"
               disabled={isLoggingIn}
-              className="w-full bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
+              className="w-full bg-zinc-100 text-zinc-950 hover:bg-zinc-200 mt-2"
             >
               {isLoggingIn ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin text-zinc-900" /> Authenticating...
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-950" /> Authenticating...
                 </>
               ) : (
                 'Access Dashboard'
@@ -270,17 +327,17 @@ export default function AdminPanel({
 
   // Render Dashboard panel
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-10 flex-1 flex flex-col">
+    <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 py-10 flex-1 flex flex-col relative">
       
       {/* Header controls row */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-zinc-900 pb-6 mb-8">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-zinc-900 pb-4 mb-6">
         <div>
-          <div className="flex items-center gap-2 text-xs text-zinc-550 font-medium">
+          <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium">
             <span>Control Panel</span>
             <span>•</span>
             <span className="text-emerald-500">Live Database</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white mt-1">
+          <h1 className="text-xl font-bold tracking-tight text-white mt-0.5">
             Admin Dashboard
           </h1>
         </div>
@@ -289,88 +346,90 @@ export default function AdminPanel({
           <Button
             onClick={openCreateModal}
             variant="default"
-            className="flex items-center gap-1.5 h-9 px-4"
+            size="sm"
+            className="flex items-center gap-1"
           >
-            <Plus className="h-4 w-4" /> Create Screening
+            <Plus className="h-3.5 w-3.5" /> Create Screening
           </Button>
           
           <Button
             onClick={handleLogout}
             variant="outline"
-            className="flex items-center gap-1.5 h-9 px-4 border-zinc-850"
+            size="sm"
+            className="flex items-center gap-1 border-zinc-900"
           >
-            <LogOut className="h-4 w-4 text-zinc-400" /> Logout
+            <LogOut className="h-3.5 w-3.5 text-zinc-550" /> Logout
           </Button>
         </div>
       </div>
 
       {/* Screenings Watch List Table */}
-      <Card className="overflow-hidden border-zinc-850">
-        <CardHeader className="px-6 py-4 border-b border-zinc-900 bg-zinc-950 flex flex-row justify-between items-center space-y-0">
-          <CardTitle className="text-sm font-semibold">Active Screenings</CardTitle>
-          <span className="text-xs text-zinc-550">{screenings.length} total</span>
+      <Card className="overflow-hidden border-zinc-900">
+        <CardHeader className="px-5 py-3.5 border-b border-zinc-900 bg-zinc-950/20 flex flex-row justify-between items-center space-y-0">
+          <CardTitle className="text-xs font-semibold text-zinc-350">Active Screenings</CardTitle>
+          <span className="text-xs text-zinc-500">{screenings.length} total</span>
         </CardHeader>
 
         {screenings.length > 0 ? (
           <div className="overflow-x-auto w-full">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-zinc-900 text-zinc-500 text-[10px] font-bold uppercase tracking-wider bg-zinc-950/20">
-                  <th className="py-3 px-6">Match Screened</th>
-                  <th className="py-3 px-6">Venue & City</th>
-                  <th className="py-3 px-6">Datetime</th>
-                  <th className="py-3 px-6 text-right">Actions</th>
+                <tr className="border-b border-zinc-900 text-zinc-550 text-[10px] font-bold uppercase tracking-wider bg-zinc-950/10">
+                  <th className="py-2.5 px-5">Match Screened</th>
+                  <th className="py-2.5 px-5">Venue & City</th>
+                  <th className="py-2.5 px-5">Datetime</th>
+                  <th className="py-2.5 px-5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-900/60 text-xs text-zinc-300">
+              <tbody className="divide-y divide-zinc-900/60 text-xs text-zinc-350 bg-zinc-950/5">
                 {screenings.map((s) => (
                   <tr key={s.id} className="hover:bg-zinc-900/10 transition-colors">
-                    <td className="py-4 px-6 font-semibold text-white">
+                    <td className="py-3 px-5 font-semibold text-white">
                       <div>{s.match_name}</div>
                       {s.google_maps_link && (
                         <a
                           href={s.google_maps_link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[10px] text-zinc-500 hover:text-white hover:underline inline-flex items-center gap-0.5 mt-1"
+                          className="text-[10px] text-zinc-500 hover:text-white hover:underline inline-flex items-center gap-0.5 mt-0.5"
                         >
                           View Map <ExternalLink className="h-2.5 w-2.5" />
                         </a>
                       )}
                     </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-1.5 text-zinc-350">
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-1">
                         <span>{s.venue_name}</span>
                       </div>
-                      <div className="text-[10px] text-zinc-550 mt-1 flex items-center gap-1">
+                      <div className="text-[10px] text-zinc-500 mt-0.5 flex items-center gap-0.5">
                         <MapPin className="h-3 w-3" /> {s.city}
                       </div>
                     </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-1.5 text-zinc-350">
-                        <Calendar className="h-3.5 w-3.5 text-zinc-500" />
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-1.5 text-zinc-400">
+                        <Calendar className="h-3.5 w-3.5 text-zinc-600" />
                         <span>{new Date(s.screening_datetime).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' })}</span>
                       </div>
-                      <div className="text-[10px] text-zinc-550 mt-1 flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5 text-zinc-500" />
+                      <div className="text-[10px] text-zinc-500 mt-0.5 flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5 text-zinc-650" />
                         <span>{new Date(s.screening_datetime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
                       </div>
                     </td>
-                    <td className="py-4 px-6 text-right">
+                    <td className="py-3 px-5 text-right">
                       <div className="inline-flex gap-1.5">
                         <Button
                           onClick={() => openEditModal(s)}
                           variant="outline"
                           size="sm"
-                          className="h-8 px-2 border-zinc-850"
+                          className="h-7 px-2 border-zinc-900"
                         >
-                          <Pencil className="h-3.5 w-3.5" />
+                          <Pencil className="h-3.5 w-3.5 text-zinc-400" />
                         </Button>
                         <Button
-                          onClick={() => handleDeleteScreening(s.id, s.match_name)}
+                          onClick={() => setConfirmDeleteScreening(s)}
                           variant="destructive"
                           size="sm"
-                          className="h-8 px-2"
+                          className="h-7 px-2 bg-red-950/20 text-red-400 border border-red-900/10 hover:bg-red-900/30"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -384,7 +443,7 @@ export default function AdminPanel({
         ) : (
           <div className="p-12 text-center text-zinc-500 flex flex-col items-center">
             <p className="text-xs font-semibold">No screenings are created yet.</p>
-            <p className="text-[11px] text-zinc-600 mt-1">Click the &quot;Create Screening&quot; button to add your first football match watch party.</p>
+            <p className="text-[10px] text-zinc-600 mt-1">Click the &quot;Create Screening&quot; button to add your first watch party.</p>
           </div>
         )}
       </Card>
@@ -392,29 +451,29 @@ export default function AdminPanel({
       {/* CREATE & EDIT FORM OVERLAY MODAL */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-          <Card className="w-full max-w-2xl p-6 sm:p-8 border-zinc-850 shadow-2xl relative my-8">
+          <Card className="w-full max-w-2xl p-6 border-zinc-900 shadow-md relative my-8 bg-zinc-950">
             
             {/* Modal Close Button */}
             <button
               onClick={closeModal}
-              className="absolute top-4 right-4 p-1 rounded-lg hover:bg-zinc-900 text-zinc-450 hover:text-white transition-colors"
+              className="absolute top-4 right-4 p-1 rounded-md hover:bg-zinc-900 text-zinc-500 hover:text-white transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
 
             {/* Modal Title */}
-            <CardTitle className="text-xl mb-6">
+            <CardTitle className="text-sm font-bold mb-6 border-b border-zinc-900 pb-2">
               {editingScreening ? 'Edit Screening Details' : 'Create New Screening'}
             </CardTitle>
 
-            <form onSubmit={handleSaveScreening} className="space-y-6">
+            <form onSubmit={handleSaveScreening} className="space-y-4">
               
               {/* Form Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
                 {/* Match Name */}
                 <div className="sm:col-span-2">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
                     Match Name <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -423,13 +482,16 @@ export default function AdminPanel({
                     value={matchName}
                     onChange={(e) => setMatchName(e.target.value)}
                     placeholder="e.g. Argentina vs Brazil - Semifinal"
-                    className="w-full bg-zinc-950"
+                    className="w-full bg-zinc-950 border-zinc-900"
                   />
+                  {validationErrors.matchName && (
+                    <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.matchName}</span>
+                  )}
                 </div>
 
                 {/* Venue Name */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
                     Venue Name <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -438,19 +500,22 @@ export default function AdminPanel({
                     value={venueName}
                     onChange={(e) => setVenueName(e.target.value)}
                     placeholder="e.g. Kozhikode Beach Open Stage"
-                    className="w-full bg-zinc-950"
+                    className="w-full bg-zinc-950 border-zinc-900"
                   />
+                  {validationErrors.venueName && (
+                    <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.venueName}</span>
+                  )}
                 </div>
 
                 {/* City Selector */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
                     City <span className="text-red-500">*</span>
                   </label>
                   <Select
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    className="w-full bg-zinc-950"
+                    className="w-full bg-zinc-950 border-zinc-900"
                   >
                     <option value="Kochi">Kochi</option>
                     <option value="Thrissur">Thrissur</option>
@@ -458,11 +523,14 @@ export default function AdminPanel({
                     <option value="Trivandrum">Trivandrum</option>
                     <option value="Kottayam">Kottayam</option>
                   </Select>
+                  {validationErrors.city && (
+                    <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.city}</span>
+                  )}
                 </div>
 
                 {/* Address */}
                 <div className="sm:col-span-2">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
                     Full Address <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -471,13 +539,16 @@ export default function AdminPanel({
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="e.g. Beach Road, Kozhikode, Kerala 673032"
-                    className="w-full bg-zinc-950"
+                    className="w-full bg-zinc-950 border-zinc-900"
                   />
+                  {validationErrors.address && (
+                    <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.address}</span>
+                  )}
                 </div>
 
                 {/* Screening Date & Time */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
                     Date & Time <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -485,13 +556,16 @@ export default function AdminPanel({
                     required
                     value={screeningDatetime}
                     onChange={(e) => setScreeningDatetime(e.target.value)}
-                    className="w-full bg-zinc-950 text-zinc-400"
+                    className="w-full bg-zinc-950 text-zinc-400 border-zinc-900"
                   />
+                  {validationErrors.screeningDatetime && (
+                    <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.screeningDatetime}</span>
+                  )}
                 </div>
 
                 {/* Poster Image URL */}
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
                     Poster Image URL (Optional)
                   </label>
                   <Input
@@ -499,13 +573,13 @@ export default function AdminPanel({
                     value={posterImageUrl}
                     onChange={(e) => setPosterImageUrl(e.target.value)}
                     placeholder="e.g. https://domain.com/poster.jpg"
-                    className="w-full bg-zinc-950"
+                    className="w-full bg-zinc-950 border-zinc-900"
                   />
                 </div>
 
                 {/* Google Maps Link */}
                 <div className="sm:col-span-2">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
                     Google Maps Share Link (Optional)
                   </label>
                   <Input
@@ -513,21 +587,21 @@ export default function AdminPanel({
                     value={googleMapsLink}
                     onChange={(e) => setGoogleMapsLink(e.target.value)}
                     placeholder="e.g. https://maps.app.goo.gl/..."
-                    className="w-full bg-zinc-950"
+                    className="w-full bg-zinc-950 border-zinc-900"
                   />
                 </div>
 
                 {/* Description */}
                 <div className="sm:col-span-2">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
                     Screening Description
                   </label>
                   <Textarea
-                    rows={4}
+                    rows={3}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Provide details about the screening setup, screens, sound systems, etc..."
-                    className="w-full bg-zinc-950"
+                    placeholder="Provide details about the screening setup, sound systems, food, etc..."
+                    className="w-full bg-zinc-950 border-zinc-900"
                   />
                 </div>
 
@@ -539,23 +613,26 @@ export default function AdminPanel({
               )}
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-zinc-900">
+              <div className="flex justify-end gap-2 pt-4 border-t border-zinc-900">
                 <Button
                   type="button"
                   onClick={closeModal}
                   variant="outline"
-                  className="border-zinc-850"
+                  size="sm"
+                  className="border-zinc-900"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSaving}
-                  className="bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
+                  variant="default"
+                  size="sm"
+                  className="bg-zinc-100 text-zinc-950 hover:bg-zinc-200"
                 >
                   {isSaving ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin text-zinc-900" /> Saving...
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-950" /> Saving...
                     </>
                   ) : (
                     'Save Screening'
@@ -565,6 +642,70 @@ export default function AdminPanel({
 
             </form>
           </Card>
+        </div>
+      )}
+
+      {/* CUSTOM DELETE CONFIRMATION DIALOG MODAL */}
+      {confirmDeleteScreening && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <Card className="w-full max-w-sm p-6 border-zinc-900 bg-zinc-950 relative">
+            <div className="text-center mb-6 flex flex-col items-center">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-950/20 text-red-500 border border-red-900/10 mb-3">
+                <AlertTriangle className="h-4.5 w-4.5" />
+              </span>
+              <CardTitle className="text-sm font-bold text-white">
+                Delete Watch Screening?
+              </CardTitle>
+              <CardDescription className="mt-2 text-zinc-400">
+                Are you sure you want to delete the watch party for <strong className="text-zinc-200">{confirmDeleteScreening.match_name}</strong>? This action cannot be undone.
+              </CardDescription>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                onClick={() => setConfirmDeleteScreening(null)}
+                variant="outline"
+                size="sm"
+                className="border-zinc-900 text-zinc-450 hover:text-white"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={executeDeleteScreening}
+                disabled={isDeleting}
+                variant="destructive"
+                size="sm"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin text-red-400" /> Deleting...
+                  </>
+                ) : (
+                  'Confirm Delete'
+                )}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* TOAST ALERT NOTIFICATIONS SYSTEM */}
+      {toast && (
+        <div className="fixed bottom-4 right-4 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-xs font-semibold shadow-md ${
+            toast.type === 'success'
+              ? 'bg-zinc-950 border-zinc-900 text-zinc-200'
+              : 'bg-red-950/30 border-red-900/10 text-red-400'
+          }`}>
+            {toast.type === 'success' ? (
+              <CheckCircle className="h-4 w-4 text-emerald-500" />
+            ) : (
+              <AlertTriangle className="h-4 w-4 text-red-400" />
+            )}
+            <span>{toast.text}</span>
+          </div>
         </div>
       )}
 

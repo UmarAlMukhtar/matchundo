@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
+import { Button } from "@/components/ui/button";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,15 +31,15 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100 selection:bg-zinc-800 selection:text-zinc-100">
         {/* Navigation Bar */}
-        <header className="sticky top-0 z-50 w-full border-b border-zinc-900 bg-zinc-950/70 backdrop-blur-md">
-          <div className="mx-auto flex max-w-7xl h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-8">
-              <Link href="/" className="flex items-center gap-2 group">
-                <span className="text-base font-semibold tracking-tight text-white transition-colors hover:text-zinc-350">
-                  Match<span className="text-emerald-500">Undo</span>
+        <header className="sticky top-0 z-50 w-full border-b border-zinc-900/60 bg-zinc-950/80 backdrop-blur-md">
+          <div className="mx-auto flex max-w-5xl h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-6">
+              <Link href="/" className="flex items-center gap-1.5 group">
+                <span className="text-sm font-bold tracking-tight text-white transition-colors group-hover:text-zinc-300">
+                  Match<span className="text-emerald-500 font-medium">Undo</span>
                 </span>
               </Link>
-              <nav className="hidden sm:flex items-center gap-6 text-sm text-zinc-450">
+              <nav className="hidden sm:flex items-center gap-5 text-xs font-semibold text-zinc-400">
                 <Link href="/" className="hover:text-zinc-200 transition-colors">
                   Home
                 </Link>
@@ -51,16 +52,15 @@ export default function RootLayout({
               </nav>
             </div>
             
-            <div className="flex items-center gap-4">
-              <Link
-                href="/screenings"
-                className="inline-flex h-8 items-center justify-center rounded-md bg-zinc-100 px-3 text-xs font-semibold text-zinc-900 hover:bg-zinc-200 transition-colors"
-              >
-                Find Screenings
+            <div className="flex items-center gap-3">
+              <Link href="/screenings" className="hidden sm:inline-block">
+                <Button variant="default" size="sm" className="font-semibold">
+                  Find Screenings
+                </Button>
               </Link>
               
               {/* Mobile links */}
-              <nav className="flex sm:hidden items-center gap-3 text-xs text-zinc-450">
+              <nav className="flex sm:hidden items-center gap-3.5 text-xs font-semibold text-zinc-400">
                 <Link href="/screenings" className="hover:text-zinc-200 transition-colors">
                   Listings
                 </Link>
@@ -78,19 +78,19 @@ export default function RootLayout({
         </main>
 
         {/* Footer */}
-        <footer className="w-full border-t border-zinc-900 bg-zinc-950 py-6">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <footer className="w-full border-t border-zinc-900 bg-zinc-950 py-5">
+          <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 flex flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold tracking-tight text-white">
-                Match<span className="text-emerald-500">Undo</span>
+              <span className="text-xs font-bold tracking-tight text-white">
+                Match<span className="text-emerald-500 font-medium">Undo</span>
               </span>
               <span className="text-zinc-800 text-[10px]">|</span>
-              <p className="text-xs text-zinc-500">
-                Kerala Football Screening Discovery
+              <p className="text-[10px] text-zinc-500 font-medium">
+                Kerala Watch Party Directory
               </p>
             </div>
-            <p className="text-[11px] text-zinc-650">
-              &copy; {new Date().getFullYear()} MatchUndo. All rights reserved.
+            <p className="text-[10px] text-zinc-600 font-medium">
+              &copy; {new Date().getFullYear()} MatchUndo.
             </p>
           </div>
         </footer>

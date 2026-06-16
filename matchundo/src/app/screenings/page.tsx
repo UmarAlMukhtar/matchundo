@@ -85,24 +85,24 @@ export default async function ScreeningsPage({ searchParams }: PageProps) {
   };
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-10 flex-1 flex flex-col">
+    <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 py-8 flex-1 flex flex-col">
       {/* Page Header */}
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+          <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
             FIFA Screenings
           </h1>
-          <p className="text-zinc-400 text-xs mt-1">
-            Browse public watch parties and matches broadcasting in Kerala.
+          <p className="text-zinc-500 text-[11px] mt-0.5">
+            Browse public watch parties and screenings in Kerala.
           </p>
         </div>
-        <div className="text-xs text-zinc-500 font-medium">
-          {screenings.length} watch parties found
+        <div className="text-[11px] text-zinc-500 font-semibold">
+          {screenings.length} watches available
         </div>
       </div>
 
       {/* Filters and Controls Area */}
-      <div className="bg-zinc-950/40 border border-zinc-900 rounded-xl p-4 sm:p-5 mb-8 flex flex-col gap-5">
+      <div className="bg-zinc-950/20 border border-zinc-900 rounded-xl p-4 sm:p-5 mb-8 flex flex-col gap-4">
         
         {/* Search & Sort Row */}
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -110,36 +110,36 @@ export default async function ScreeningsPage({ searchParams }: PageProps) {
             {currentCity !== "All" && <input type="hidden" name="city" value={currentCity} />}
             {currentSort !== "asc" && <input type="hidden" name="sort" value={currentSort} />}
             
-            <Search className="absolute left-3.5 text-zinc-650 h-4 w-4" />
+            <Search className="absolute left-3 text-zinc-650 h-3.5 w-3.5" />
             <Input
               type="text"
               name="search"
               defaultValue={currentSearch}
               placeholder="Search matches or venues..."
-              className="w-full bg-zinc-950 pl-10 pr-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-zinc-700"
+              className="w-full bg-zinc-950 pl-9 pr-3 py-1.5 text-xs text-white placeholder-zinc-650 border-zinc-900 focus:border-zinc-800"
             />
           </form>
 
           {/* Sort Control */}
-          <div className="flex items-center gap-2 self-end md:self-auto justify-end text-xs">
-            <span className="text-zinc-500">Sort by date:</span>
-            <div className="inline-flex rounded-md bg-zinc-950 p-0.5 border border-zinc-900">
+          <div className="flex items-center gap-2 self-end md:self-auto justify-end text-[11px]">
+            <span className="text-zinc-500">Date order:</span>
+            <div className="inline-flex rounded bg-zinc-950 p-0.5 border border-zinc-900">
               <Link
                 href={getFilterUrl({ sort: "asc" })}
-                className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
                   currentSort === "asc"
-                    ? "bg-zinc-100 text-zinc-900"
-                    : "text-zinc-400 hover:text-zinc-200"
+                    ? "bg-zinc-100 text-zinc-950"
+                    : "text-zinc-450 hover:text-zinc-200"
                 }`}
               >
                 Nearest
               </Link>
               <Link
                 href={getFilterUrl({ sort: "desc" })}
-                className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors ${
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
                   currentSort === "desc"
-                    ? "bg-zinc-100 text-zinc-900"
-                    : "text-zinc-400 hover:text-zinc-200"
+                    ? "bg-zinc-100 text-zinc-950"
+                    : "text-zinc-450 hover:text-zinc-200"
                 }`}
               >
                 Furthest
@@ -149,8 +149,8 @@ export default async function ScreeningsPage({ searchParams }: PageProps) {
         </div>
 
         {/* City Filter Tabs */}
-        <div className="border-t border-zinc-900 pt-4 flex flex-col gap-2">
-          <span className="text-zinc-500 text-xs font-medium">Filter by city:</span>
+        <div className="border-t border-zinc-900/60 pt-4 flex flex-col gap-2">
+          <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Select City:</span>
           <div className="flex flex-wrap gap-1.5">
             {cities.map((city) => {
               const isActive = currentCity.toLowerCase() === city.toLowerCase();
@@ -158,10 +158,10 @@ export default async function ScreeningsPage({ searchParams }: PageProps) {
                 <Link
                   key={city}
                   href={getFilterUrl({ city })}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${
+                  className={`px-2.5 py-1 rounded text-xs font-semibold transition-all border ${
                     isActive
-                      ? "bg-zinc-100 border-zinc-100 text-zinc-900 font-bold"
-                      : "bg-zinc-950 border-zinc-900 text-zinc-350 hover:border-zinc-800 hover:text-zinc-200"
+                      ? "bg-zinc-100 border-zinc-105 text-zinc-950"
+                      : "bg-zinc-950 border-zinc-900 text-zinc-400 hover:border-zinc-800 hover:text-zinc-200"
                   }`}
                 >
                   {city}
@@ -178,9 +178,9 @@ export default async function ScreeningsPage({ searchParams }: PageProps) {
           {screenings.map((screening) => {
             const { dateStr, timeStr } = formatScreeningDate(screening.screening_datetime);
             return (
-              <Card key={screening.id} className="flex flex-col h-full overflow-hidden hover:border-zinc-700 border-zinc-850">
-                {/* Poster Image or Placeholder */}
-                <div className="relative h-44 w-full bg-zinc-900 overflow-hidden flex items-center justify-center border-b border-zinc-900">
+              <Card key={screening.id} className="flex flex-col h-full overflow-hidden border-zinc-900 hover:border-zinc-850">
+                {/* Poster image or placeholder */}
+                <div className="relative h-40 w-full bg-zinc-950 overflow-hidden flex items-center justify-center border-b border-zinc-900">
                   {screening.poster_image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -189,72 +189,50 @@ export default async function ScreeningsPage({ searchParams }: PageProps) {
                       className="object-cover w-full h-full"
                     />
                   ) : (
-                    /* Notion-style minimal banner */
-                    <div className="absolute inset-0 flex flex-col justify-between p-5 bg-zinc-950">
-                      <div className="w-full flex justify-between text-[9px] text-zinc-500 font-bold uppercase tracking-wider">
-                        <span>Kerala watch</span>
-                        <span className="text-emerald-500">World Cup</span>
+                    /* Notion-style minimal card placeholder banner */
+                    <div className="absolute inset-0 flex flex-col justify-between p-4 bg-zinc-950/40">
+                      <div className="w-full flex justify-between text-[9px] text-zinc-550 font-bold uppercase tracking-wider">
+                        <span>Kerala Football</span>
+                        <span className="text-emerald-500 font-medium">World Cup</span>
                       </div>
                       
                       <div className="text-left py-1">
-                        <p className="text-sm font-bold text-white leading-tight uppercase line-clamp-2">
+                        <p className="text-xs font-bold text-zinc-100 leading-snug uppercase line-clamp-2">
                           {screening.match_name.split(' - ')[0]}
                         </p>
                         {screening.match_name.split(' - ')[1] && (
-                          <p className="text-[10px] text-zinc-450 mt-0.5 font-medium">
+                          <p className="text-[9px] text-zinc-500 mt-0.5">
                             {screening.match_name.split(' - ')[1]}
                           </p>
                         )}
                       </div>
                       
-                      <div className="w-full text-[9px] text-zinc-500 truncate">
-                        🏟️ {screening.venue_name}
+                      <div className="w-full text-[9px] text-zinc-550 truncate">
+                        Venue: {screening.venue_name}
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Card Content */}
-                <CardHeader className="p-5 flex-1 flex flex-col justify-between">
+                {/* Card Header & Content */}
+                <CardHeader className="p-4 flex-1 flex flex-col justify-between">
                   <div>
                     <div className="mb-2">
-                      <span className="inline-flex items-center rounded bg-zinc-900 px-2 py-0.5 text-[10px] font-bold text-zinc-300 border border-zinc-850">
+                      <span className="inline-flex items-center rounded bg-zinc-900 px-2 py-0.5 text-[9px] font-bold text-zinc-350 border border-zinc-850">
                         {screening.city}
                       </span>
                     </div>
 
-                    <CardTitle className="text-base line-clamp-2">{screening.match_name}</CardTitle>
-                    <p className="text-xs text-zinc-400 mt-1.5 flex items-center gap-1">
-                      <span className="text-zinc-500">Venue:</span> <span className="text-zinc-200">{screening.venue_name}</span>
+                    <CardTitle className="text-xs font-bold line-clamp-2 leading-tight">{screening.match_name}</CardTitle>
+                    <p className="text-[11px] text-zinc-550 mt-1">
+                      Venue: <span className="text-zinc-350">{screening.venue_name}</span>
                     </p>
-                    <p className="text-xs text-zinc-500 line-clamp-2 mt-3 leading-relaxed">
+                    <p className="text-[11px] text-zinc-500 line-clamp-2 mt-3 leading-relaxed">
                       {screening.description || "No description provided."}
                     </p>
                   </div>
 
-                  <CardContent className="p-0 mt-5">
-                    {/* Date details wrapper */}
-                    <div className="bg-zinc-950 rounded-lg p-3 border border-zinc-900 text-xs text-zinc-400 flex flex-col gap-1.5 mb-4">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-3.5 w-3.5 text-zinc-500" />
-                        <span>{dateStr}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-3.5 w-3.5 text-zinc-500" />
-                        <span>{timeStr}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-3.5 w-3.5 text-zinc-500" />
-                        <span className="truncate">{screening.address}</span>
-                      </div>
-                    </div>
-
-                    <Link href={`/screenings/${screening.id}`}>
-                      <Button variant="outline" className="w-full text-xs font-semibold py-2">
-                        View details
-                      </Button>
-                    </Link>
-                  </CardContent>
+                  <ContentWrapper dateStr={dateStr} timeStr={timeStr} address={screening.address} screeningId={screening.id} />
                 </CardHeader>
               </Card>
             );
@@ -262,18 +240,47 @@ export default async function ScreeningsPage({ searchParams }: PageProps) {
         </div>
       ) : (
         /* Empty State */
-        <Card className="p-16 text-center max-w-md mx-auto mt-10 border-zinc-850">
-          <h3 className="text-sm font-bold text-white mb-1">No screenings found</h3>
-          <p className="text-zinc-500 text-xs mb-6">
-            We couldn&apos;t find any match screenings matching your criteria. Try adjusting your filters.
+        <Card className="p-16 text-center max-w-sm mx-auto mt-10 border-zinc-900">
+          <h3 className="text-xs font-bold text-white mb-1">No screenings found</h3>
+          <p className="text-zinc-500 text-[11px] mb-5 leading-relaxed">
+            There are no match watch parties listed matching your city filters or search keyword.
           </p>
           <Link href="/screenings">
-            <Button size="sm" variant="outline" className="text-xs">
-              Reset filters
+            <Button size="sm" variant="outline" className="text-xs font-semibold border-zinc-900">
+              Clear filters
             </Button>
           </Link>
         </Card>
       )}
     </div>
+  );
+}
+
+// Internal wrapper to simplify JSX and make it neat
+function ContentWrapper({ dateStr, timeStr, address, screeningId }: { dateStr: string; timeStr: string; address: string; screeningId: string }) {
+  return (
+    <CardContent className="p-0 mt-4">
+      {/* Date details wrapper */}
+      <div className="bg-zinc-950 rounded-lg p-3 border border-zinc-900 text-[11px] text-zinc-450 flex flex-col gap-1.5 mb-4">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-3.5 w-3.5 text-zinc-650" />
+          <span>{dateStr}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock className="h-3.5 w-3.5 text-zinc-650" />
+          <span>{timeStr}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <MapPin className="h-3.5 w-3.5 text-zinc-650" />
+          <span className="truncate">{address}</span>
+        </div>
+      </div>
+
+      <Link href={`/screenings/${screeningId}`}>
+        <Button variant="outline" size="sm" className="w-full text-xs font-semibold">
+          View Details
+        </Button>
+      </Link>
+    </CardContent>
   );
 }
