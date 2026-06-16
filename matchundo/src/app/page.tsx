@@ -5,6 +5,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+import { trackPageView } from "@/lib/analytics";
+import { getVenueSlugMap, getVenueSlugKey, slugify } from "@/lib/venue";
+
 export const dynamic = "force-dynamic";
 
 function formatScreeningDate(isoString: string) {
@@ -27,7 +30,9 @@ function formatScreeningDate(isoString: string) {
 }
 
 export default async function HomePage() {
-  const allScreenings = await db.getScreenings();
+  trackPageView("/");
+  const allScreenings = await db.getApprovedScreenings();
+  const slugMap = getVenueSlugMap(allScreenings);
   
   // Filter for future/upcoming screenings
   const now = new Date();
@@ -158,7 +163,7 @@ export default async function HomePage() {
                     <div>
                       <CardTitle className="text-xs font-bold leading-tight line-clamp-1">{screening.match_name}</CardTitle>
                       <CardDescription className="text-[11px] text-zinc-500 mt-1 flex items-center gap-1">
-                        <span>Venue:</span> <span className="text-zinc-350">{screening.venue_name}</span>
+                        <span>Venue:</span> <Link href={`/venues/${slugMap.get(getVenueSlugKey(screening.venue_name, screening.city, screening.address)) || slugify(screening.venue_name)}`} className="text-zinc-350 hover:text-white transition-colors hover:underline">{screening.venue_name}</Link>
                       </CardDescription>
 
                       <div className="mt-4 pt-3.5 border-t border-zinc-900/60 flex flex-col gap-2 text-[11px] text-zinc-450">

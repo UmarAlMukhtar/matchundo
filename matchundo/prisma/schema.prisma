@@ -17,6 +17,23 @@ model Screening {
   posterImageUrl    String?  @map("poster_image_url")
   googleMapsLink    String?  @map("google_maps_link")
   createdAt         DateTime @default(now()) @map("created_at")
+  
+  // Submission & Moderation fields
+  status            String   @default("approved") // pending, approved, rejected
+  submittedByName   String?  @map("submitted_by_name")
+  submittedByEmail  String?  @map("submitted_by_email")
+  reviewedAt        DateTime? @map("reviewed_at")
+  reviewedBy        String?  @map("reviewed_by")
 
   @@map("screenings")
+}
+
+model ModerationEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  screeningId String   @map("screening_id") @db.Uuid
+  action      String   // submission_created, submission_approved, submission_rejected
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("moderation_events")
 }

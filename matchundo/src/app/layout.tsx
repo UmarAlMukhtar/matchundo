@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { Button } from "@/components/ui/button";
+import { checkAdminAuth } from "@/app/actions";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,11 +20,13 @@ export const metadata: Metadata = {
   description: "Discover public sports match screenings in Kerala.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isAdmin = await checkAdminAuth();
+
   return (
     <html
       lang="en"
@@ -46,6 +49,19 @@ export default function RootLayout({
                 <Link href="/screenings" className="hover:text-zinc-200 transition-colors">
                   Screenings
                 </Link>
+                <Link href="/venues" className="hover:text-zinc-200 transition-colors">
+                  Venues
+                </Link>
+                {isAdmin && (
+                  <>
+                    <Link href="/admin/submissions" className="hover:text-amber-400 transition-colors text-amber-500">
+                      Submissions
+                    </Link>
+                    <Link href="/admin/analytics" className="hover:text-zinc-200 transition-colors text-zinc-450">
+                      Analytics
+                    </Link>
+                  </>
+                )}
                 <Link href="/admin" className="hover:text-zinc-200 transition-colors">
                   Admin
                 </Link>
@@ -53,19 +69,31 @@ export default function RootLayout({
             </div>
             
             <div className="flex items-center gap-3">
-              <Link href="/screenings" className="hidden sm:inline-block">
-                <Button variant="default" size="sm" className="font-semibold">
-                  Find Screenings
+              <Link href="/submit" className="hidden sm:inline-block">
+                <Button variant="default" size="sm" className="font-semibold bg-zinc-100 text-zinc-950 hover:bg-zinc-200">
+                  Submit Watch
                 </Button>
               </Link>
               
-              {/* Mobile links */}
               <nav className="flex sm:hidden items-center gap-3.5 text-xs font-semibold text-zinc-400">
                 <Link href="/screenings" className="hover:text-zinc-200 transition-colors">
                   Listings
                 </Link>
-                <Link href="/admin" className="hover:text-zinc-200 transition-colors">
-                  Admin
+                <Link href="/venues" className="hover:text-zinc-200 transition-colors">
+                  Venues
+                </Link>
+                {isAdmin && (
+                  <>
+                    <Link href="/admin/submissions" className="hover:text-zinc-200 transition-colors text-amber-500">
+                      Submissions
+                    </Link>
+                    <Link href="/admin/analytics" className="hover:text-zinc-200 transition-colors text-zinc-450">
+                      Analytics
+                    </Link>
+                  </>
+                )}
+                <Link href="/submit" className="hover:text-zinc-200 transition-colors">
+                  Submit
                 </Link>
               </nav>
             </div>
@@ -85,11 +113,11 @@ export default function RootLayout({
                 Match<span className="text-emerald-500 font-medium">Undo</span>
               </span>
               <span className="text-zinc-800 text-[10px]">|</span>
-              <p className="text-[10px] text-zinc-500 font-medium">
+              <p className="text-[10px] text-zinc-550 font-medium">
                 Kerala Watch Party Directory
               </p>
             </div>
-            <p className="text-[10px] text-zinc-600 font-medium">
+            <p className="text-[10px] text-zinc-650 font-medium">
               &copy; {new Date().getFullYear()} MatchUndo.
             </p>
           </div>

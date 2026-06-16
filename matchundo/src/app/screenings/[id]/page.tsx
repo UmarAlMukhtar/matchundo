@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
-import { MapPin, Calendar, Clock, ArrowLeft, ExternalLink, Map, Info } from "lucide-react";
+import { MapPin, Calendar, Clock, ArrowLeft, ExternalLink, Map as MapIcon, Info } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShareButton } from "@/components/ShareButton";
+import { checkAdminAuth } from "@/app/actions";
+import { trackPageView, trackEvent } from "@/lib/analytics";
+import { getVenueSlugMap, getVenueSlugKey, slugify } from "@/lib/venue";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -17,8 +20,9 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const screening = await db.getScreeningById(id);
+  const isAdmin = await checkAdminAuth();
   
-  if (!screening) {
+  if (!screening || (screening.status !== 'approved' && !isAdmin)) {
     return {
       title: "Screening Not Found | MatchUndo",
     };
@@ -62,10 +66,19 @@ function formatScreeningDateTime(isoString: string) {
 export default async function ScreeningDetailPage({ params }: PageProps) {
   const { id } = await params;
   const screening = await db.getScreeningById(id);
+  const isAdmin = await checkAdminAuth();
 
-  if (!screening) {
+  if (!screening || (screening.status !== 'approved' && !isAdmin)) {
     notFound();
   }
+
+  // Track page views and detail clicks
+  trackPageView(`/screenings/${id}`);
+  trackEvent("screening_view", { id, match: screening.match_name, venue: screening.venue_name });
+
+  const allApproved = await db.getApprovedScreenings();
+  const slugMap = getVenueSlugMap(allApproved);
+  const venueSlug = slugMap.get(getVenueSlugKey(screening.venue_name, screening.city, screening.address)) || slugify(screening.venue_name);
 
   const { dateStr, timeStr } = formatScreeningDateTime(screening.screening_datetime);
 
@@ -214,7 +227,9 @@ export default async function ScreeningDetailPage({ params }: PageProps) {
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] text-zinc-550 uppercase tracking-wider font-bold">Venue & Address</p>
-                <p className="text-xs font-semibold text-zinc-305 mt-0.5">{screening.venue_name}</p>
+                <Link href={`/venues/${venueSlug}`} className="text-xs font-semibold text-zinc-305 hover:text-white transition-colors mt-0.5 hover:underline block">
+                  {screening.venue_name}
+                </Link>
                 <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">{screening.address}</p>
               </div>
             </div>
@@ -244,7 +259,7 @@ export default async function ScreeningDetailPage({ params }: PageProps) {
                   variant="default"
                   className="w-full flex items-center justify-center gap-1.5 h-9"
                 >
-                  <Map className="h-4 w-4 text-zinc-950" /> Open in Google Maps <ExternalLink className="h-3 w-3 text-zinc-950" />
+                  <MapIcon className="h-4 w-4 text-zinc-950" /> Open in Google Maps <ExternalLink className="h-3 w-3 text-zinc-950" />
                 </Button>
               </a>
             ) : (
@@ -253,7 +268,7 @@ export default async function ScreeningDetailPage({ params }: PageProps) {
                 variant="outline"
                 className="flex-1 flex items-center justify-center gap-1.5 h-9 border-zinc-900 text-zinc-700 cursor-not-allowed"
               >
-                <Map className="h-4 w-4" /> Maps Link Unavailable
+                <MapIcon className="h-4 w-4" /> Maps Link Unavailable
               </Button>
             )}
             

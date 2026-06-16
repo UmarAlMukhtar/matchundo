@@ -24,6 +24,7 @@ import {
   CheckCircle,
   AlertTriangle
 } from 'lucide-react';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -197,7 +198,11 @@ export default function AdminPanel({
     if (!venueName.trim()) errors.venueName = 'Venue name is required.';
     if (!city.trim()) errors.city = 'City selection is required.';
     if (!address.trim()) errors.address = 'Full address is required.';
-    if (!screeningDatetime) errors.screeningDatetime = 'Date and time are required.';
+    if (!screeningDatetime) {
+      errors.screeningDatetime = 'Date and time are required.';
+    } else if (new Date(screeningDatetime) < new Date()) {
+      errors.screeningDatetime = 'Screening date must be in the future.';
+    }
 
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
@@ -551,12 +556,10 @@ export default function AdminPanel({
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
                     Date & Time <span className="text-red-500">*</span>
                   </label>
-                  <Input
-                    type="datetime-local"
-                    required
+                  <DateTimePicker
                     value={screeningDatetime}
-                    onChange={(e) => setScreeningDatetime(e.target.value)}
-                    className="w-full bg-zinc-950 text-zinc-400 border-zinc-900"
+                    onChange={setScreeningDatetime}
+                    error={validationErrors.screeningDatetime}
                   />
                   {validationErrors.screeningDatetime && (
                     <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.screeningDatetime}</span>

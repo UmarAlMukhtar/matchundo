@@ -12,6 +12,21 @@ export interface Screening {
   poster_image_url: string;
   google_maps_link: string;
   created_at?: string;
+  
+  // Submission & Moderation fields
+  status?: string;
+  submitted_by_name?: string;
+  submitted_by_email?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+}
+
+export interface ModerationEvent {
+  id: string;
+  screening_id: string;
+  action: string;
+  notes: string;
+  created_at: string;
 }
 
 // Mapper to convert Prisma models back to the snake_case frontend interface
@@ -26,12 +41,17 @@ function mapPrismaToScreening(s: PrismaScreening): Screening {
     description: s.description || '',
     poster_image_url: s.posterImageUrl || '',
     google_maps_link: s.googleMapsLink || '',
-    created_at: s.createdAt.toISOString()
+    created_at: s.createdAt.toISOString(),
+    status: s.status,
+    submitted_by_name: s.submittedByName || '',
+    submitted_by_email: s.submittedByEmail || '',
+    reviewed_at: s.reviewedAt?.toISOString() || '',
+    reviewed_by: s.reviewedBy || ''
   };
 }
 
 export const db = {
-  // Fetch all screenings sorted by date
+  // Fetch ALL screenings sorted by date (e.g. for admin/listing fallback)
   async getScreenings(): Promise<Screening[]> {
     try {
       const items = await prisma.screening.findMany({
@@ -42,6 +62,42 @@ export const db = {
       return items.map(mapPrismaToScreening);
     } catch (error) {
       console.error('Error fetching screenings from Prisma:', error);
+      return [];
+    }
+  },
+
+  // Fetch only APPROVED screenings sorted by date (for public listings)
+  async getApprovedScreenings(): Promise<Screening[]> {
+    try {
+      const items = await prisma.screening.findMany({
+        where: {
+          status: 'approved'
+        },
+        orderBy: {
+          screeningDatetime: 'asc'
+        }
+      });
+      return items.map(mapPrismaToScreening);
+    } catch (error) {
+      console.error('Error fetching approved screenings from Prisma:', error);
+      return [];
+    }
+  },
+
+  // Fetch screenings by specific status (e.g. pending, rejected, approved) for moderation
+  async getScreeningsByStatus(status: string): Promise<Screening[]> {
+    try {
+      const items = await prisma.screening.findMany({
+        where: {
+          status: status
+        },
+        orderBy: {
+          screeningDatetime: 'asc'
+        }
+      });
+      return items.map(mapPrismaToScreening);
+    } catch (error) {
+      console.error(`Error fetching screenings by status ${status} from Prisma:`, error);
       return [];
     }
   },
@@ -71,7 +127,12 @@ export const db = {
           screeningDatetime: new Date(data.screening_datetime),
           description: data.description || null,
           posterImageUrl: data.poster_image_url || null,
-          googleMapsLink: data.google_maps_link || null
+          googleMapsLink: data.google_maps_link || null,
+          status: data.status || 'approved',
+          submittedByName: data.submitted_by_name || null,
+          submittedByEmail: data.submitted_by_email || null,
+          reviewedAt: data.reviewed_at ? new Date(data.reviewed_at) : null,
+          reviewedBy: data.reviewed_by || null
         }
       });
       return mapPrismaToScreening(s);
@@ -93,6 +154,11 @@ export const db = {
       if (data.description !== undefined) updateData.description = data.description || null;
       if (data.poster_image_url !== undefined) updateData.posterImageUrl = data.poster_image_url || null;
       if (data.google_maps_link !== undefined) updateData.googleMapsLink = data.google_maps_link || null;
+      if (data.status !== undefined) updateData.status = data.status;
+      if (data.submitted_by_name !== undefined) updateData.submittedByName = data.submitted_by_name || null;
+      if (data.submitted_by_email !== undefined) updateData.submittedByEmail = data.submitted_by_email || null;
+      if (data.reviewed_at !== undefined) updateData.reviewedAt = data.reviewed_at ? new Date(data.reviewed_at) : null;
+      if (data.reviewed_by !== undefined) updateData.reviewedBy = data.reviewed_by || null;
 
       const s = await prisma.screening.update({
         where: { id },
@@ -115,6 +181,44 @@ export const db = {
     } catch (error) {
       console.error(`Error deleting screening ${id} in Prisma:`, error);
       return false;
+    }
+  },
+
+  // Moderation Event logger
+  async createModerationEvent(screeningId: string, action: string, notes?: string): Promise<boolean> {
+    try {
+      await prisma.moderationEvent.create({
+        data: {
+          screeningId,
+          action,
+          notes: notes || null
+        }
+      });
+      return true;
+    } catch (error) {
+      console.error(`Error logging moderation event for screening ${screeningId}:`, error);
+      return false;
+    }
+  },
+
+  // Fetch all moderation events
+  async getModerationEvents(): Promise<ModerationEvent[]> {
+    try {
+      const items = await prisma.moderationEvent.findMany({
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+      return items.map(e => ({
+        id: e.id,
+        screening_id: e.screeningId,
+        action: e.action,
+        notes: e.notes || '',
+        created_at: e.createdAt.toISOString()
+      }));
+    } catch (error) {
+      console.error('Error fetching moderation events from Prisma:', error);
+      return [];
     }
   }
 };

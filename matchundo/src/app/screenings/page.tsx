@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { MapPin, Calendar, Clock, Search } from "lucide-react";
+import { getVenueSlugMap, getVenueSlugKey, slugify } from "@/lib/venue";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,13 +33,25 @@ function formatScreeningDate(isoString: string) {
   }
 }
 
+import { trackPageView, trackEvent } from "@/lib/analytics";
+
 export default async function ScreeningsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const currentCity = params.city || "All";
   const currentSearch = params.search || "";
   const currentSort = params.sort || "asc";
 
-  let screenings = await db.getScreenings();
+  // Track analytics
+  trackPageView("/screenings");
+  if (currentSearch) {
+    trackEvent("search", { query: currentSearch });
+  }
+  if (currentCity !== "All") {
+    trackEvent("filter_city", { city: currentCity });
+  }
+
+  let screenings = await db.getApprovedScreenings();
+  const slugMap = getVenueSlugMap(screenings);
 
   // 1. Filter by City
   if (currentCity !== "All") {
@@ -225,7 +238,7 @@ export default async function ScreeningsPage({ searchParams }: PageProps) {
 
                     <CardTitle className="text-xs font-bold line-clamp-2 leading-tight">{screening.match_name}</CardTitle>
                     <p className="text-[11px] text-zinc-550 mt-1">
-                      Venue: <span className="text-zinc-350">{screening.venue_name}</span>
+                      Venue: <Link href={`/venues/${slugMap.get(getVenueSlugKey(screening.venue_name, screening.city, screening.address)) || slugify(screening.venue_name)}`} className="text-zinc-355 hover:text-white transition-colors hover:underline">{screening.venue_name}</Link>
                     </p>
                     <p className="text-[11px] text-zinc-500 line-clamp-2 mt-3 leading-relaxed">
                       {screening.description || "No description provided."}

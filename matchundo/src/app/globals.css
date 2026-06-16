@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "react-day-picker/style.css";
+
 
 :root {
   --background: #09090b; /* Zinc 950 */
@@ -39,3 +41,37 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #3f3f46;
 }
+
+/* Custom react-day-picker dark SaaS styles */
+.rdp-custom {
+  --rdp-accent-color: #f4f4f5 !important;
+  --rdp-accent-text-color: #09090b !important;
+  --rdp-background-color: #18181b !important;
+}
+
+.rdp-custom .rdp-day {
+  font-size: 11px !important;
+  border-radius: 4px !important;
+}
+
+.rdp-custom .rdp-day:hover:not(.rdp-selected) {
+  background-color: #18181b !important;
+  color: #f4f4f5 !important;
+}
+
+.rdp-custom .rdp-selected {
+  background-color: #f4f4f5 !important;
+  color: #09090b !important;
+  font-weight: bold !important;
+}
+
+.rdp-custom .rdp-today {
+  color: #f4f4f5 !important;
+  font-weight: bold !important;
+  border: 1px solid #27272a !important;
+}
+
+.rdp-custom .rdp-chevron {
+  fill: #71717a !important;
+}
+

@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { db, Screening } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
+import { trackEvent } from '@/lib/analytics';
 
 const ADMIN_COOKIE_NAME = 'matchundo_admin_token';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
@@ -38,7 +39,7 @@ export async function logoutAdmin(): Promise<void> {
   revalidatePath('/admin');
 }
 
-// Action to create screening
+// Action to create screening (Admin direct creation)
 export async function createScreeningAction(
   data: Omit<Screening, 'id'>
 ): Promise<{ success: boolean; screening?: Screening | null; error?: string }> {
@@ -52,12 +53,23 @@ export async function createScreeningAction(
     return { success: false, error: 'Missing required screening fields.' };
   }
 
+  if (new Date(data.screening_datetime) < new Date()) {
+    return { success: false, error: 'Screening date must be in the future.' };
+  }
+
   try {
-    const result = await db.createScreening(data);
+    const result = await db.createScreening({
+      ...data,
+      status: 'approved' // Admin created screenings are approved by default
+    });
     if (result) {
       revalidatePath('/');
       revalidatePath('/screenings');
       revalidatePath('/admin');
+      
+      // Track event
+      trackEvent('admin_create_screening', { id: result.id, match: result.match_name });
+
       return { success: true, screening: result };
     }
     return { success: false, error: 'Failed to write screening to database.' };
@@ -77,6 +89,12 @@ export async function updateScreeningAction(
     return { success: false, error: 'Unauthorized. Please login.' };
   }
 
+  if (data.screening_datetime !== undefined) {
+    if (new Date(data.screening_datetime) < new Date()) {
+      return { success: false, error: 'Screening date must be in the future.' };
+    }
+  }
+
   try {
     const result = await db.updateScreening(id, data);
     if (result) {
@@ -84,6 +102,7 @@ export async function updateScreeningAction(
       revalidatePath('/screenings');
       revalidatePath(`/screenings/${id}`);
       revalidatePath('/admin');
+      revalidatePath('/admin/submissions');
       return { success: true, screening: result };
     }
     return { success: false, error: 'Failed to update screening in database.' };
@@ -108,11 +127,121 @@ export async function deleteScreeningAction(
       revalidatePath('/');
       revalidatePath('/screenings');
       revalidatePath('/admin');
+      revalidatePath('/admin/submissions');
       return { success: true };
     }
     return { success: false, error: 'Failed to delete screening.' };
   } catch (error) {
     console.error(`Error deleting screening ${id}:`, error);
+    return { success: false, error: 'Internal server error.' };
+  }
+}
+
+// Action for public submission of watch parties
+export async function submitScreeningAction(
+  data: Omit<Screening, 'id' | 'status' | 'reviewed_at' | 'reviewed_by'>
+): Promise<{ success: boolean; screening?: Screening | null; error?: string }> {
+  // Input validation
+  if (!data.match_name || !data.venue_name || !data.city || !data.address || !data.screening_datetime || !data.submitted_by_name) {
+    return { success: false, error: 'Missing required screening fields.' };
+  }
+
+  if (new Date(data.screening_datetime) < new Date()) {
+    return { success: false, error: 'Screening date must be in the future.' };
+  }
+
+  try {
+    const result = await db.createScreening({
+      ...data,
+      status: 'pending' // Public submissions are pending by default
+    });
+    
+    if (result) {
+      // 1. Log moderation event in DB
+      await db.createModerationEvent(result.id, 'submission_created', `Submitted by ${data.submitted_by_name}`);
+      
+      // 2. Track general event
+      trackEvent('submission_created', { id: result.id, match: result.match_name, city: result.city });
+
+      // Revalidate submission list path
+      revalidatePath('/admin/submissions');
+      return { success: true, screening: result };
+    }
+    return { success: false, error: 'Failed to submit screening.' };
+  } catch (error) {
+    console.error('Error submitting screening:', error);
+    return { success: false, error: 'Internal server error.' };
+  }
+}
+
+// Action to approve pending screening
+export async function approveScreeningAction(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  const isAuthenticated = await checkAdminAuth();
+  if (!isAuthenticated) {
+    return { success: false, error: 'Unauthorized. Please login.' };
+  }
+
+  try {
+    const result = await db.updateScreening(id, {
+      status: 'approved',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: 'admin'
+    });
+
+    if (result) {
+      // 1. Log moderation event in DB
+      await db.createModerationEvent(id, 'submission_approved', 'Approved by admin');
+      
+      // 2. Track general event
+      trackEvent('submission_approved', { id });
+
+      revalidatePath('/');
+      revalidatePath('/screenings');
+      revalidatePath(`/screenings/${id}`);
+      revalidatePath('/admin/submissions');
+      
+      // Revalidate venues slug if applicable
+      return { success: true };
+    }
+    return { success: false, error: 'Failed to approve submission.' };
+  } catch (error) {
+    console.error(`Error approving screening ${id}:`, error);
+    return { success: false, error: 'Internal server error.' };
+  }
+}
+
+// Action to reject pending screening
+export async function rejectScreeningAction(
+  id: string,
+  notes?: string
+): Promise<{ success: boolean; error?: string }> {
+  const isAuthenticated = await checkAdminAuth();
+  if (!isAuthenticated) {
+    return { success: false, error: 'Unauthorized. Please login.' };
+  }
+
+  try {
+    const result = await db.updateScreening(id, {
+      status: 'rejected',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: 'admin'
+    });
+
+    if (result) {
+      // 1. Log moderation event in DB
+      await db.createModerationEvent(id, 'submission_rejected', notes || 'Rejected by admin');
+      
+      // 2. Track general event
+      trackEvent('submission_rejected', { id });
+
+      revalidatePath('/admin/submissions');
+      return { success: true };
+    }
+    return { success: false, error: 'Failed to reject submission.' };
+  } catch (error) {
+    console.error(`Error rejecting screening ${id}:`, error);
     return { success: false, error: 'Internal server error.' };
   }
 }
