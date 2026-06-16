@@ -18,6 +18,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "MatchUndo - World Cup Screenings Kerala",
   description: "Discover public sports match screenings in Kerala.",
+  verification: {
+    google: "hHEIeBNoTCe9P6swaZiwadSb2V8XQBK-ecSI3_aXyCM",
+  },
 };
 
 export default async function RootLayout({
