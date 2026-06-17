@@ -42,6 +42,7 @@ interface ValidationErrors {
   city?: string;
   address?: string;
   screeningDatetime?: string;
+  sport?: string;
 }
 
 interface ToastMessage {
@@ -97,6 +98,9 @@ export default function AdminPanel({
   const [description, setDescription] = useState('');
   const [posterImageUrl, setPosterImageUrl] = useState('');
   const [googleMapsLink, setGoogleMapsLink] = useState('');
+  const [sport, setSport] = useState('Football');
+  const [customSport, setCustomSport] = useState('');
+  const [competition, setCompetition] = useState('');
 
   // Auto-dismiss toasts after 3 seconds
   useEffect(() => {
@@ -157,6 +161,9 @@ export default function AdminPanel({
     setDescription('');
     setPosterImageUrl('');
     setGoogleMapsLink('');
+    setSport('Football');
+    setCustomSport('');
+    setCompetition('');
     setValidationErrors({});
     setFormError('');
     setShowModal(true);
@@ -173,6 +180,17 @@ export default function AdminPanel({
     setDescription(screening.description);
     setPosterImageUrl(screening.poster_image_url || '');
     setGoogleMapsLink(screening.google_maps_link || '');
+    
+    const sVal = screening.sport || '';
+    if (sVal === '' || ['Football', 'Cricket', 'Formula 1', 'Kabaddi', 'Esports'].includes(sVal)) {
+      setSport(sVal || 'Football');
+      setCustomSport('');
+    } else {
+      setSport('Other');
+      setCustomSport(sVal);
+    }
+    setCompetition(screening.competition || '');
+
     setValidationErrors({});
     setFormError('');
     setShowModal(true);
@@ -203,6 +221,9 @@ export default function AdminPanel({
     } else if (new Date(screeningDatetime) < new Date()) {
       errors.screeningDatetime = 'Screening date must be in the future.';
     }
+    if (sport === 'Other' && !customSport.trim()) {
+      errors.sport = 'Please specify the sport name.';
+    }
 
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
@@ -211,6 +232,7 @@ export default function AdminPanel({
       return;
     }
 
+    const finalSport = sport === 'Other' ? customSport : sport;
     const payload = {
       match_name: matchName.trim(),
       venue_name: venueName.trim(),
@@ -219,7 +241,9 @@ export default function AdminPanel({
       screening_datetime: new Date(screeningDatetime).toISOString(),
       description: description.trim(),
       poster_image_url: posterImageUrl.trim(),
-      google_maps_link: googleMapsLink.trim()
+      google_maps_link: googleMapsLink.trim(),
+      sport: finalSport.trim() || undefined,
+      competition: competition.trim() || undefined
     };
 
     try {
@@ -486,13 +510,70 @@ export default function AdminPanel({
                     required
                     value={matchName}
                     onChange={(e) => setMatchName(e.target.value)}
-                    placeholder="e.g. Argentina vs Brazil - Semifinal"
+                    placeholder="e.g. Argentina vs Brazil"
                     className="w-full bg-zinc-950 border-zinc-900"
                   />
                   {validationErrors.matchName && (
                     <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.matchName}</span>
                   )}
                 </div>
+
+                {/* Sport & Competition Selection */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:col-span-2">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                      Sport
+                    </label>
+                    <Select
+                      value={sport}
+                      onChange={(e) => {
+                        setSport(e.target.value);
+                        if (e.target.value !== 'Other') setCustomSport('');
+                      }}
+                      className="w-full bg-zinc-950 border-zinc-900 text-xs h-9"
+                    >
+                      <option value="Football">Football</option>
+                      <option value="Cricket">Cricket</option>
+                      <option value="Formula 1">Formula 1</option>
+                      <option value="Kabaddi">Kabaddi</option>
+                      <option value="Esports">Esports</option>
+                      <option value="Other">Other (Specify)</option>
+                    </Select>
+                    {validationErrors.sport && (
+                      <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.sport}</span>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                      Competition
+                    </label>
+                    <Input
+                      type="text"
+                      value={competition}
+                      onChange={(e) => setCompetition(e.target.value)}
+                      placeholder="e.g. IPL, Premier League"
+                      className="w-full bg-zinc-950 border-zinc-900 text-xs h-9"
+                    />
+                  </div>
+                </div>
+
+                {/* Custom Sport Input */}
+                {sport === 'Other' && (
+                  <div className="sm:col-span-2 animate-in slide-in-from-top-1 duration-150">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                      Specify Sport Name <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="text"
+                      required
+                      value={customSport}
+                      onChange={(e) => setCustomSport(e.target.value)}
+                      placeholder="e.g. Badminton"
+                      className="w-full bg-zinc-950 border-zinc-900 text-xs h-9"
+                    />
+                  </div>
+                )}
 
                 {/* Venue Name */}
                 <div>

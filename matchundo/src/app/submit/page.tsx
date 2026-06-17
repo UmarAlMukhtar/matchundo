@@ -29,6 +29,9 @@ export default function SubmitScreeningPage() {
   const [googleMapsLink, setGoogleMapsLink] = useState("");
   const [submittedByName, setSubmittedByName] = useState("");
   const [submittedByEmail, setSubmittedByEmail] = useState("");
+  const [sport, setSport] = useState("Football");
+  const [customSport, setCustomSport] = useState("");
+  const [competition, setCompetition] = useState("");
 
   // UI state
   const [isPending, setIsPending] = useState(false);
@@ -44,6 +47,9 @@ export default function SubmitScreeningPage() {
     const errors: Record<string, string> = {};
     if (!matchName.trim()) errors.matchName = "Match name is required";
     if (!venueName.trim()) errors.venueName = "Venue name is required";
+    if (sport === "Other" && !customSport.trim()) {
+      errors.sport = "Please specify the sport name";
+    }
     
     const finalCity = citySelection === "Other" ? customCity : citySelection;
     if (!finalCity.trim()) errors.city = "City is required";
@@ -85,6 +91,7 @@ export default function SubmitScreeningPage() {
     setIsPending(true);
 
     const finalCity = citySelection === "Other" ? customCity : citySelection;
+    const finalSport = sport === "Other" ? customSport : sport;
 
     try {
       const response = await submitScreeningAction({
@@ -98,6 +105,8 @@ export default function SubmitScreeningPage() {
         google_maps_link: googleMapsLink.trim(),
         submitted_by_name: submittedByName.trim(),
         submitted_by_email: submittedByEmail.trim() || undefined,
+        sport: finalSport.trim() || undefined,
+        competition: competition.trim() || undefined,
       });
 
       if (response.success) {
@@ -124,6 +133,9 @@ export default function SubmitScreeningPage() {
     setGoogleMapsLink("");
     setSubmittedByName("");
     setSubmittedByEmail("");
+    setSport("Football");
+    setCustomSport("");
+    setCompetition("");
     setErrorMsg("");
     setValidationErrors({});
     setIsSubmitted(false);
@@ -204,13 +216,70 @@ export default function SubmitScreeningPage() {
                 required
                 value={matchName}
                 onChange={(e) => setMatchName(e.target.value)}
-                placeholder="e.g. Argentina vs France - FIFA World Cup"
+                placeholder="e.g. Argentina vs France"
                 className="w-full bg-zinc-950 border-zinc-900 text-xs h-9"
               />
               {validationErrors.matchName && (
                 <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.matchName}</span>
               )}
             </div>
+
+            {/* Sport & Competition Selection */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                  Sport <span className="text-zinc-650">(Optional)</span>
+                </label>
+                <Select
+                  value={sport}
+                  onChange={(e) => {
+                    setSport(e.target.value);
+                    if (e.target.value !== "Other") setCustomSport("");
+                  }}
+                  className="w-full bg-zinc-950 border-zinc-900 text-xs h-9"
+                >
+                  <option value="Football">Football</option>
+                  <option value="Cricket">Cricket</option>
+                  <option value="Formula 1">Formula 1</option>
+                  <option value="Kabaddi">Kabaddi</option>
+                  <option value="Esports">Esports</option>
+                  <option value="Other">Other (Specify)</option>
+                </Select>
+                {validationErrors.sport && (
+                  <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.sport}</span>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                  Competition <span className="text-zinc-650">(Optional)</span>
+                </label>
+                <Input
+                  type="text"
+                  value={competition}
+                  onChange={(e) => setCompetition(e.target.value)}
+                  placeholder="e.g. IPL, Premier League, ISL"
+                  className="w-full bg-zinc-950 border-zinc-900 text-xs h-9"
+                />
+              </div>
+            </div>
+
+            {/* Custom Sport (Conditional input) */}
+            {sport === "Other" && (
+              <div className="animate-in slide-in-from-top-1 duration-150">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                  Specify Sport Name <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="text"
+                  required
+                  value={customSport}
+                  onChange={(e) => setCustomSport(e.target.value)}
+                  placeholder="e.g. Badminton"
+                  className="w-full bg-zinc-950 border-zinc-900 text-xs h-9"
+                />
+              </div>
+            )}
 
             {/* Venue Details Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

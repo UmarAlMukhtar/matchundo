@@ -8,6 +8,7 @@ import { ShareButton } from "@/components/ShareButton";
 import { checkAdminAuth } from "@/app/actions";
 import { trackPageView, trackEvent } from "@/lib/analytics";
 import { getVenueSlugMap, getVenueSlugKey, slugify } from "@/lib/venue";
+import { ReportButton } from "@/components/ReportButton";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -141,7 +142,7 @@ export default async function ScreeningDetailPage({ params }: PageProps) {
               <div className="w-full aspect-[3/4] bg-zinc-950 p-6 flex flex-col justify-between items-start text-left relative">
                 <div>
                   <span className="inline-flex items-center rounded-md bg-zinc-900 px-2 py-0.5 text-[9px] font-bold text-zinc-500 border border-zinc-900 uppercase tracking-widest">
-                    World Cup
+                    {screening.sport || "Live Screening"}
                   </span>
                 </div>
                 
@@ -175,6 +176,16 @@ export default async function ScreeningDetailPage({ params }: PageProps) {
               <span className="inline-flex items-center rounded bg-zinc-900 px-2.5 py-0.5 text-[9px] font-bold text-zinc-400 border border-zinc-900">
                 {screening.city}
               </span>
+              {screening.sport && (
+                <span className="inline-flex items-center rounded bg-emerald-950/20 border border-emerald-900/15 px-2.5 py-0.5 text-[9px] font-bold text-emerald-400">
+                  {screening.sport}
+                </span>
+              )}
+              {screening.competition && (
+                <span className="inline-flex items-center rounded bg-zinc-900 border border-zinc-800 px-2.5 py-0.5 text-[9px] font-bold text-zinc-400">
+                  {screening.competition}
+                </span>
+              )}
               <span className="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">
                 Public WATCH PARTY
               </span>
@@ -273,6 +284,7 @@ export default async function ScreeningDetailPage({ params }: PageProps) {
             )}
             
             <ShareButton />
+            <ReportButton screeningId={screening.id} />
           </div>
 
         </div>

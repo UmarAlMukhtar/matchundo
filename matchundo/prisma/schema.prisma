@@ -24,8 +24,25 @@ model Screening {
   submittedByEmail  String?  @map("submitted_by_email")
   reviewedAt        DateTime? @map("reviewed_at")
   reviewedBy        String?  @map("reviewed_by")
+  
+  sport             String?
+  competition       String?
+  reports           Report[]
 
   @@map("screenings")
+}
+
+model Report {
+  id          String    @id @default(uuid()) @db.Uuid
+  screeningId String    @map("screening_id") @db.Uuid
+  reason      String
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  status      String    @default("pending") // pending, resolved
+
+  screening   Screening @relation(fields: [screeningId], references: [id], onDelete: Cascade)
+
+  @@map("reports")
 }
 
 model ModerationEvent {

@@ -49,15 +49,15 @@ export default async function HomePage() {
       <section className="relative w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20 text-center flex flex-col items-center">
         
         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-zinc-900 border border-zinc-900 text-zinc-400 text-[10px] font-bold uppercase tracking-wider mb-6">
-          <Play className="h-2.5 w-2.5 text-emerald-500 fill-emerald-500" /> Watch Screenings Kerala
+          <Play className="h-2.5 w-2.5 text-emerald-500 fill-emerald-500" /> Sports Watch Party Directory
         </div>
         
         <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl max-w-xl mx-auto leading-tight mb-3">
-          Find World Cup Screenings Near You
+          Discover Sports Watch Parties Near You
         </h1>
         
         <p className="text-xs sm:text-sm text-zinc-450 max-w-md mx-auto mb-8 leading-relaxed">
-          Discover public watch parties, outdoor screenings, and local venues broadcasting matches live across Kerala.
+          Find live match screenings, outdoor screens, and community watch events across Kerala.
         </p>
 
         {/* Search Input Bar */}
@@ -161,6 +161,18 @@ export default async function HomePage() {
                   {/* Card Content */}
                   <CardHeader className="p-4 flex-1 flex flex-col justify-between">
                     <div>
+                      <div className="flex flex-wrap gap-1.5 mb-2.5">
+                        {screening.sport && (
+                          <span className="inline-flex items-center rounded bg-emerald-950/20 border border-emerald-900/15 px-2 py-0.5 text-[9px] font-bold text-emerald-400">
+                            {screening.sport}
+                          </span>
+                        )}
+                        {screening.competition && (
+                          <span className="inline-flex items-center rounded bg-zinc-900 border border-zinc-850 px-2 py-0.5 text-[9px] font-bold text-zinc-400">
+                            {screening.competition}
+                          </span>
+                        )}
+                      </div>
                       <CardTitle className="text-xs font-bold leading-tight line-clamp-1">{screening.match_name}</CardTitle>
                       <CardDescription className="text-[11px] text-zinc-500 mt-1 flex items-center gap-1">
                         <span>Venue:</span> <Link href={`/venues/${slugMap.get(getVenueSlugKey(screening.venue_name, screening.city, screening.address)) || slugify(screening.venue_name)}`} className="text-zinc-350 hover:text-white transition-colors hover:underline">{screening.venue_name}</Link>
@@ -214,10 +226,10 @@ export default async function HomePage() {
         <div className="rounded-lg border border-zinc-900 p-5 bg-zinc-950/40">
           <div className="max-w-lg">
             <h2 className="text-xs font-bold text-white mb-1.5 uppercase tracking-wide">
-              Kerala Football Watch Parties
+              Find Live Match Screenings Across Kerala
             </h2>
             <p className="text-[11px] text-zinc-500 leading-relaxed mb-4">
-              MatchUndo index watch parties, public screenings, beach screens, and local stadium venues broadcasting matches in Kerala. Discover screenings in your local neighborhood and join the community.
+              MatchUndo indexes public match screenings, sports hubs, beach screens, and cafe watch parties across Kerala. Discover live broadcasts in your local neighborhood and join the community.
             </p>
             <div className="flex flex-wrap gap-2.5">
               <Link href="/screenings">

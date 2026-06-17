@@ -166,6 +166,19 @@ export default async function VenueDetailPage({ params }: PageProps) {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
                           <h3 className="text-xs font-bold text-white line-clamp-1">{screening.match_name}</h3>
+                          
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {screening.sport && (
+                              <span className="inline-flex items-center rounded bg-emerald-950/20 border border-emerald-900/15 px-1.5 py-0.5 text-[8px] font-bold text-emerald-400">
+                                {screening.sport}
+                              </span>
+                            )}
+                            {screening.competition && (
+                              <span className="inline-flex items-center rounded bg-zinc-900 border border-zinc-850 px-1.5 py-0.5 text-[8px] font-bold text-zinc-400">
+                                {screening.competition}
+                              </span>
+                            )}
+                          </div>
                           <div className="flex flex-wrap items-center gap-3 text-[10px] text-zinc-500 mt-1">
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3 text-zinc-650" /> {dateStr}
@@ -217,7 +230,20 @@ export default async function VenueDetailPage({ params }: PageProps) {
                     <Card key={screening.id} className="border-zinc-900 bg-zinc-950/20 p-3">
                       <div className="flex items-center justify-between gap-4">
                         <div>
-                          <h3 className="text-xs font-semibold text-zinc-350 line-clamp-1">{screening.match_name}</h3>
+                          <h3 className="text-xs font-semibold text-zinc-355 line-clamp-1">{screening.match_name}</h3>
+                          
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {screening.sport && (
+                              <span className="inline-flex items-center rounded bg-emerald-950/20 border border-emerald-900/10 px-1.5 py-0.5 text-[8px] font-bold text-emerald-450">
+                                {screening.sport}
+                              </span>
+                            )}
+                            {screening.competition && (
+                              <span className="inline-flex items-center rounded bg-zinc-900 border border-zinc-900 px-1.5 py-0.5 text-[8px] font-bold text-zinc-500">
+                                {screening.competition}
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-3 text-[9px] text-zinc-550 mt-0.5">
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3 text-zinc-700" /> {dateStr}

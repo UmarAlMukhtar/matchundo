@@ -16,11 +16,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MatchUndo - World Cup Screenings Kerala",
-  description: "Discover public sports match screenings in Kerala.",
+  title: "MatchUndo - Sports Watch Parties & Match Screenings",
+  description: "Discover live sports screenings, watch parties, and community match events across Kerala.",
   verification: {
     google: "hHEIeBNoTCe9P6swaZiwadSb2V8XQBK-ecSI3_aXyCM",
   },
+  openGraph: {
+    title: "MatchUndo - Sports Watch Parties & Match Screenings",
+    description: "Discover live sports screenings, watch parties, and community match events across Kerala.",
+    url: "https://matchundo.vercel.app",
+    siteName: "MatchUndo",
+    locale: "en_IN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MatchUndo - Sports Watch Parties & Match Screenings",
+    description: "Discover live sports screenings, watch parties, and community match events across Kerala.",
+  }
 };
 
 export default async function RootLayout({
@@ -109,20 +122,52 @@ export default async function RootLayout({
         </main>
 
         {/* Footer */}
-        <footer className="w-full border-t border-zinc-900 bg-zinc-950 py-5">
-          <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 flex flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold tracking-tight text-white">
-                Match<span className="text-emerald-500 font-medium">Undo</span>
-              </span>
-              <span className="text-zinc-800 text-[10px]">|</span>
-              <p className="text-[10px] text-zinc-550 font-medium">
-                Kerala Watch Party Directory
+        <footer className="w-full border-t border-zinc-900 bg-zinc-950 py-8 mt-auto">
+          <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-6">
+            
+            {/* Top row: Brand & Legal Links */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-zinc-900/60 pb-5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold tracking-tight text-white">
+                  Match<span className="text-emerald-500 font-medium">Undo</span>
+                </span>
+                <span className="text-zinc-800 text-[10px]">|</span>
+                <p className="text-[10px] text-zinc-550 font-medium">
+                  Kerala Sports Screenings Directory
+                </p>
+              </div>
+              
+              <nav className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-zinc-500 font-semibold">
+                <Link href="/privacy" className="hover:text-zinc-350 transition-colors">
+                  Privacy Policy
+                </Link>
+                <Link href="/terms" className="hover:text-zinc-350 transition-colors">
+                  Terms & Conditions
+                </Link>
+                <Link href="/disclaimer" className="hover:text-zinc-350 transition-colors">
+                  Disclaimer
+                </Link>
+                <Link href="/contact" className="hover:text-zinc-350 transition-colors">
+                  Contact
+                </Link>
+              </nav>
+            </div>
+
+            {/* Bottom Row: Disclaimers & Copyright */}
+            <div className="flex flex-col md:flex-row justify-between gap-4 text-[9px] text-zinc-650 leading-relaxed">
+              <div className="max-w-2xl space-y-1 text-left">
+                <p>
+                  MatchUndo is an independent community platform for discovering public sports screenings and watch parties. MatchUndo is not affiliated with, endorsed by, or sponsored by FIFA, the FIFA World Cup, IPL, ISL, UEFA, clubs, leagues, teams, or governing bodies.
+                </p>
+                <p>
+                  Information on MatchUndo may be community-submitted. Please verify event details with venues before attending.
+                </p>
+              </div>
+              <p className="shrink-0 text-left md:text-right mt-1 md:mt-0 font-medium">
+                &copy; {new Date().getFullYear()} MatchUndo.
               </p>
             </div>
-            <p className="text-[10px] text-zinc-650 font-medium">
-              &copy; {new Date().getFullYear()} MatchUndo.
-            </p>
+
           </div>
         </footer>
       </body>

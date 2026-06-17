@@ -22,6 +22,18 @@ export interface Screening {
   submitted_by_email?: string;
   reviewed_at?: string;
   reviewed_by?: string;
+  sport?: string;
+  competition?: string;
+}
+
+export interface Report {
+  id: string;
+  screening_id: string;
+  reason: string;
+  notes: string;
+  created_at: string;
+  status: string;
+  screening_title?: string;
 }
 
 export interface ModerationEvent {
@@ -49,7 +61,9 @@ function mapPrismaToScreening(s: PrismaScreening): Screening {
     submitted_by_name: s.submittedByName || '',
     submitted_by_email: s.submittedByEmail || '',
     reviewed_at: s.reviewedAt?.toISOString() || '',
-    reviewed_by: s.reviewedBy || ''
+    reviewed_by: s.reviewedBy || '',
+    sport: s.sport || '',
+    competition: s.competition || ''
   };
 }
 
@@ -135,7 +149,9 @@ export const db = {
           submittedByName: data.submitted_by_name || null,
           submittedByEmail: data.submitted_by_email || null,
           reviewedAt: data.reviewed_at ? new Date(data.reviewed_at) : null,
-          reviewedBy: data.reviewed_by || null
+          reviewedBy: data.reviewed_by || null,
+          sport: data.sport || null,
+          competition: data.competition || null
         }
       });
       return mapPrismaToScreening(s);
@@ -162,6 +178,8 @@ export const db = {
       if (data.submitted_by_email !== undefined) updateData.submittedByEmail = data.submitted_by_email || null;
       if (data.reviewed_at !== undefined) updateData.reviewedAt = data.reviewed_at ? new Date(data.reviewed_at) : null;
       if (data.reviewed_by !== undefined) updateData.reviewedBy = data.reviewed_by || null;
+      if (data.sport !== undefined) updateData.sport = data.sport || null;
+      if (data.competition !== undefined) updateData.competition = data.competition || null;
 
       const s = await prisma.screening.update({
         where: { id },
@@ -222,6 +240,66 @@ export const db = {
     } catch (error) {
       console.error('Error fetching moderation events from Prisma:', error);
       return [];
+    }
+  },
+
+  // Create a user report for a screening
+  async createReport(screeningId: string, reason: string, notes?: string): Promise<boolean> {
+    try {
+      await prisma.report.create({
+        data: {
+          screeningId,
+          reason,
+          notes: notes || null
+        }
+      });
+      return true;
+    } catch (error) {
+      console.error(`Error logging user report for screening ${screeningId}:`, error);
+      return false;
+    }
+  },
+
+  // Fetch all reports (pending or resolved, sorted by date)
+  async getReports(): Promise<Report[]> {
+    try {
+      const items = await prisma.report.findMany({
+        include: {
+          screening: {
+            select: {
+              matchName: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+      return items.map(r => ({
+        id: r.id,
+        screening_id: r.screeningId,
+        reason: r.reason,
+        notes: r.notes || '',
+        created_at: r.createdAt.toISOString(),
+        status: r.status,
+        screening_title: r.screening.matchName
+      }));
+    } catch (error) {
+      console.error('Error fetching user reports from Prisma:', error);
+      return [];
+    }
+  },
+
+  // Dismiss a user report
+  async dismissReport(id: string): Promise<boolean> {
+    try {
+      await prisma.report.delete({
+        where: { id }
+      });
+      return true;
+    } catch (error) {
+      console.error(`Error deleting user report ${id} in Prisma:`, error);
+      return false;
     }
   }
 };

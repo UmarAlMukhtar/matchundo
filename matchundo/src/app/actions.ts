@@ -245,3 +245,44 @@ export async function rejectScreeningAction(
     return { success: false, error: 'Internal server error.' };
   }
 }
+
+// Action to create user report for listing
+export async function createReportAction(
+  screeningId: string,
+  reason: string,
+  notes?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await db.createReport(screeningId, reason, notes);
+    if (success) {
+      revalidatePath('/admin/submissions');
+      return { success: true };
+    }
+    return { success: false, error: 'Failed to submit report.' };
+  } catch (error) {
+    console.error(`Error reporting screening ${screeningId}:`, error);
+    return { success: false, error: 'Internal server error.' };
+  }
+}
+
+// Action to dismiss a user report
+export async function dismissReportAction(
+  reportId: string
+): Promise<{ success: boolean; error?: string }> {
+  const isAuthenticated = await checkAdminAuth();
+  if (!isAuthenticated) {
+    return { success: false, error: 'Unauthorized. Please login.' };
+  }
+
+  try {
+    const success = await db.dismissReport(reportId);
+    if (success) {
+      revalidatePath('/admin/submissions');
+      return { success: true };
+    }
+    return { success: false, error: 'Failed to dismiss report.' };
+  } catch (error) {
+    console.error(`Error dismissing report ${reportId}:`, error);
+    return { success: false, error: 'Internal server error.' };
+  }
+}

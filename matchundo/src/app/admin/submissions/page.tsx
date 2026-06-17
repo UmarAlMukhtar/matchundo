@@ -24,10 +24,12 @@ export default async function AdminSubmissionsPage({ searchParams }: PageProps) 
 
   // Fetch all screenings (pending, approved, rejected)
   const screenings = await db.getScreenings();
+  const reports = await db.getReports();
 
   return (
     <SubmissionsPanel
       initialScreenings={screenings}
+      initialReports={reports}
       initialTab={tab}
     />
   );
