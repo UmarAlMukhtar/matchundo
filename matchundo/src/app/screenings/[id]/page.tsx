@@ -29,8 +29,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const title = `${screening.match_name} - Screening at ${screening.venue_name} | MatchUndo`;
-  const description = `Live broadcast of ${screening.match_name} at ${screening.venue_name} in ${screening.city}, Kerala. Get address, match timings, and location map.`;
+  const title = `${screening.match_name} | MatchUndo`;
+  const description = `Watch ${screening.match_name} at ${screening.venue_name}, ${screening.city}.`;
 
   return {
     title,
@@ -41,6 +41,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       type: "website",
       images: screening.poster_image_url ? [{ url: screening.poster_image_url }] : [],
     },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: screening.poster_image_url ? [screening.poster_image_url] : [],
+    }
   };
 }
 
@@ -258,17 +264,17 @@ export default async function ScreeningDetailPage({ params }: PageProps) {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-2.5 pt-4 border-t border-zinc-900">
+          <div className="flex flex-wrap gap-2 pt-4 border-t border-zinc-900 items-center">
             {screening.google_maps_link ? (
               <a
                 href={screening.google_maps_link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1"
+                className="flex-1 sm:flex-initial"
               >
                 <Button
                   variant="default"
-                  className="w-full flex items-center justify-center gap-1.5 h-9"
+                  className="w-full flex items-center justify-center gap-1.5 h-9 text-xs font-semibold px-4"
                 >
                   <MapIcon className="h-4 w-4 text-zinc-950" /> Open in Google Maps <ExternalLink className="h-3 w-3 text-zinc-950" />
                 </Button>
@@ -277,13 +283,19 @@ export default async function ScreeningDetailPage({ params }: PageProps) {
               <Button
                 disabled
                 variant="outline"
-                className="flex-1 flex items-center justify-center gap-1.5 h-9 border-zinc-900 text-zinc-700 cursor-not-allowed"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 h-9 border-zinc-900 text-zinc-700 cursor-not-allowed text-xs font-semibold px-4"
               >
                 <MapIcon className="h-4 w-4" /> Maps Link Unavailable
               </Button>
             )}
             
-            <ShareButton />
+            <ShareButton
+              screeningId={screening.id}
+              matchName={screening.match_name}
+              venueName={screening.venue_name}
+              city={screening.city}
+              datetime={screening.screening_datetime}
+            />
             <ReportButton screeningId={screening.id} />
           </div>
 
