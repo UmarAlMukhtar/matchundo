@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Screening } from '@/lib/db';
+import { VenueSelector } from '@/components/VenueSelector';
+import { getVenuesFromScreenings, type VenueInfo } from '@/lib/venue';
 import {
   loginAdmin,
   logoutAdmin,
@@ -43,6 +45,7 @@ interface ValidationErrors {
   address?: string;
   screeningDatetime?: string;
   sport?: string;
+  competition?: string;
 }
 
 interface ToastMessage {
@@ -92,7 +95,8 @@ export default function AdminPanel({
   // Form Fields
   const [matchName, setMatchName] = useState('');
   const [venueName, setVenueName] = useState('');
-  const [city, setCity] = useState('Kochi');
+  const [citySelection, setCitySelection] = useState('Kochi');
+  const [customCity, setCustomCity] = useState('');
   const [address, setAddress] = useState('');
   const [screeningDatetime, setScreeningDatetime] = useState('');
   const [description, setDescription] = useState('');
@@ -101,6 +105,10 @@ export default function AdminPanel({
   const [sport, setSport] = useState('Football');
   const [customSport, setCustomSport] = useState('');
   const [competition, setCompetition] = useState('');
+  const [customCompetition, setCustomCompetition] = useState('');
+
+  // Derive unique physical venues from screenings list
+  const venues = getVenuesFromScreenings(screenings);
 
   // Auto-dismiss toasts after 3 seconds
   useEffect(() => {
@@ -150,12 +158,35 @@ export default function AdminPanel({
     }
   };
 
+  // Handle venue selection from autocomplete selector
+  const handleSelectVenue = (selected: VenueInfo) => {
+    setVenueName(selected.venueName);
+    setAddress(selected.address);
+    setGoogleMapsLink(selected.googleMapsLink || '');
+    
+    // Autofill city
+    const cVal = selected.city;
+    const predefinedCities = [
+      "Kochi", "Trivandrum", "Kozhikode", "Thrissur", "Kannur",
+      "Kasaragod", "Palakkad", "Malappuram", "Kottayam", "Alappuzha",
+      "Pathanamthitta", "Kollam", "Idukki", "Wayanad", "Ernakulam"
+    ];
+    if (predefinedCities.includes(cVal)) {
+      setCitySelection(cVal);
+      setCustomCity('');
+    } else {
+      setCitySelection('Other');
+      setCustomCity(cVal);
+    }
+  };
+
   // Open Modal for Create Mode
   const openCreateModal = () => {
     setEditingScreening(null);
     setMatchName('');
     setVenueName('');
-    setCity('Kochi');
+    setCitySelection('Kochi');
+    setCustomCity('');
     setAddress('');
     setScreeningDatetime('');
     setDescription('');
@@ -164,6 +195,7 @@ export default function AdminPanel({
     setSport('Football');
     setCustomSport('');
     setCompetition('');
+    setCustomCompetition('');
     setValidationErrors({});
     setFormError('');
     setShowModal(true);
@@ -174,13 +206,27 @@ export default function AdminPanel({
     setEditingScreening(screening);
     setMatchName(screening.match_name);
     setVenueName(screening.venue_name);
-    setCity(screening.city);
     setAddress(screening.address);
     setScreeningDatetime(toLocalDatetimeString(screening.screening_datetime));
     setDescription(screening.description);
     setPosterImageUrl(screening.poster_image_url || '');
     setGoogleMapsLink(screening.google_maps_link || '');
     
+    // Map citySelection and customCity
+    const cVal = screening.city || 'Kochi';
+    const predefinedCities = [
+      "Kochi", "Trivandrum", "Kozhikode", "Thrissur", "Kannur",
+      "Kasaragod", "Palakkad", "Malappuram", "Kottayam", "Alappuzha",
+      "Pathanamthitta", "Kollam", "Idukki", "Wayanad", "Ernakulam"
+    ];
+    if (predefinedCities.includes(cVal)) {
+      setCitySelection(cVal);
+      setCustomCity('');
+    } else {
+      setCitySelection('Other');
+      setCustomCity(cVal);
+    }
+
     const sVal = screening.sport || '';
     if (sVal === '' || ['Football', 'Cricket', 'Formula 1', 'Kabaddi', 'Esports'].includes(sVal)) {
       setSport(sVal || 'Football');
@@ -189,7 +235,16 @@ export default function AdminPanel({
       setSport('Other');
       setCustomSport(sVal);
     }
-    setCompetition(screening.competition || '');
+    
+    // Map competition and customCompetition
+    const compVal = screening.competition || '';
+    if (compVal === '' || ['IPL', 'ISL', 'Premier League', 'UEFA Champions League', 'FIFA World Cup', 'Cricket World Cup'].includes(compVal)) {
+      setCompetition(compVal);
+      setCustomCompetition('');
+    } else {
+      setCompetition('Other');
+      setCustomCompetition(compVal);
+    }
 
     setValidationErrors({});
     setFormError('');
@@ -214,7 +269,15 @@ export default function AdminPanel({
     const errors: ValidationErrors = {};
     if (!matchName.trim()) errors.matchName = 'Match name is required.';
     if (!venueName.trim()) errors.venueName = 'Venue name is required.';
-    if (!city.trim()) errors.city = 'City selection is required.';
+    
+    const finalCity = citySelection === 'Other' ? customCity : citySelection;
+    if (!finalCity.trim()) {
+      errors.city = 'City is required.';
+    }
+    if (citySelection === 'Other' && !customCity.trim()) {
+      errors.city = 'Please specify the city name.';
+    }
+
     if (!address.trim()) errors.address = 'Full address is required.';
     if (!screeningDatetime) {
       errors.screeningDatetime = 'Date and time are required.';
@@ -223,6 +286,9 @@ export default function AdminPanel({
     }
     if (sport === 'Other' && !customSport.trim()) {
       errors.sport = 'Please specify the sport name.';
+    }
+    if (competition === 'Other' && !customCompetition.trim()) {
+      errors.competition = 'Please specify the competition name.';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -233,17 +299,18 @@ export default function AdminPanel({
     }
 
     const finalSport = sport === 'Other' ? customSport : sport;
+    const finalCompetition = competition === 'Other' ? customCompetition : competition;
     const payload = {
       match_name: matchName.trim(),
       venue_name: venueName.trim(),
-      city: city.trim(),
+      city: finalCity.trim(),
       address: address.trim(),
       screening_datetime: new Date(screeningDatetime).toISOString(),
       description: description.trim(),
       poster_image_url: posterImageUrl.trim(),
       google_maps_link: googleMapsLink.trim(),
       sport: finalSport.trim() || undefined,
-      competition: competition.trim() || undefined
+      competition: finalCompetition.trim() || undefined
     };
 
     try {
@@ -548,13 +615,26 @@ export default function AdminPanel({
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
                       Competition
                     </label>
-                    <Input
-                      type="text"
+                    <Select
                       value={competition}
-                      onChange={(e) => setCompetition(e.target.value)}
-                      placeholder="e.g. IPL, Premier League"
+                      onChange={(e) => {
+                        setCompetition(e.target.value);
+                        if (e.target.value !== 'Other') setCustomCompetition('');
+                      }}
                       className="w-full bg-zinc-950 border-zinc-900 text-xs h-9"
-                    />
+                    >
+                      <option value="">Select Competition (Optional)</option>
+                      <option value="IPL">IPL</option>
+                      <option value="ISL">ISL</option>
+                      <option value="Premier League">Premier League</option>
+                      <option value="UEFA Champions League">UEFA Champions League</option>
+                      <option value="FIFA World Cup">FIFA World Cup</option>
+                      <option value="Cricket World Cup">Cricket World Cup</option>
+                      <option value="Other">Other (Specify)</option>
+                    </Select>
+                    {validationErrors.competition && (
+                      <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.competition}</span>
+                    )}
                   </div>
                 </div>
 
@@ -575,18 +655,34 @@ export default function AdminPanel({
                   </div>
                 )}
 
+                {/* Custom Competition Input */}
+                {competition === 'Other' && (
+                  <div className="sm:col-span-2 animate-in slide-in-from-top-1 duration-150">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                      Specify Competition Name <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="text"
+                      required
+                      value={customCompetition}
+                      onChange={(e) => setCustomCompetition(e.target.value)}
+                      placeholder="e.g. La Liga, Wimbledon"
+                      className="w-full bg-zinc-950 border-zinc-900 text-xs h-9"
+                    />
+                  </div>
+                )}
+
                 {/* Venue Name */}
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
                     Venue Name <span className="text-red-500">*</span>
                   </label>
-                  <Input
-                    type="text"
-                    required
+                  <VenueSelector
+                    venues={venues}
                     value={venueName}
-                    onChange={(e) => setVenueName(e.target.value)}
+                    onChange={setVenueName}
+                    onSelectVenue={handleSelectVenue}
                     placeholder="e.g. Kozhikode Beach Open Stage"
-                    className="w-full bg-zinc-950 border-zinc-900"
                   />
                   {validationErrors.venueName && (
                     <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.venueName}</span>
@@ -599,20 +695,51 @@ export default function AdminPanel({
                     City <span className="text-red-500">*</span>
                   </label>
                   <Select
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="w-full bg-zinc-950 border-zinc-900"
+                    value={citySelection}
+                    onChange={(e) => {
+                      setCitySelection(e.target.value);
+                      if (e.target.value !== 'Other') setCustomCity('');
+                    }}
+                    className="w-full bg-zinc-950 border-zinc-900 text-xs h-9"
                   >
                     <option value="Kochi">Kochi</option>
-                    <option value="Thrissur">Thrissur</option>
-                    <option value="Kozhikode">Kozhikode</option>
                     <option value="Trivandrum">Trivandrum</option>
+                    <option value="Kozhikode">Kozhikode</option>
+                    <option value="Thrissur">Thrissur</option>
+                    <option value="Kannur">Kannur</option>
+                    <option value="Kasaragod">Kasaragod</option>
+                    <option value="Palakkad">Palakkad</option>
+                    <option value="Malappuram">Malappuram</option>
                     <option value="Kottayam">Kottayam</option>
+                    <option value="Alappuzha">Alappuzha</option>
+                    <option value="Pathanamthitta">Pathanamthitta</option>
+                    <option value="Kollam">Kollam</option>
+                    <option value="Idukki">Idukki</option>
+                    <option value="Wayanad">Wayanad</option>
+                    <option value="Ernakulam">Ernakulam</option>
+                    <option value="Other">Other (Specify)</option>
                   </Select>
                   {validationErrors.city && (
                     <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.city}</span>
                   )}
                 </div>
+
+                {/* Custom City Input */}
+                {citySelection === 'Other' && (
+                  <div className="sm:col-span-2 animate-in slide-in-from-top-1 duration-150">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                      Specify City Name <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="text"
+                      required
+                      value={customCity}
+                      onChange={(e) => setCustomCity(e.target.value)}
+                      placeholder="e.g. Kanhangad"
+                      className="w-full bg-zinc-950 border-zinc-900 text-xs h-9"
+                    />
+                  </div>
+                )}
 
                 {/* Address */}
                 <div className="sm:col-span-2">

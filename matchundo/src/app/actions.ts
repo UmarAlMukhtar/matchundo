@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { db, Screening } from '@/lib/db';
 import { revalidatePath as nextRevalidatePath } from 'next/cache';
 import { trackEvent } from '@/lib/analytics';
+import { getVenuesFromScreenings, type VenueInfo } from '@/lib/venue';
 
 function revalidatePath(path: string) {
   try {
@@ -351,5 +352,16 @@ export async function dismissReportAction(
   } catch (error) {
     console.error(`Error dismissing report ${reportId}:`, error);
     return { success: false, error: 'Internal server error.' };
+  }
+}
+
+// Action to get approved venues for public autocomplete selector
+export async function getApprovedVenuesAction(): Promise<VenueInfo[]> {
+  try {
+    const approved = await db.getApprovedScreenings();
+    return getVenuesFromScreenings(approved);
+  } catch (error) {
+    console.error("Failed to fetch approved venues:", error);
+    return [];
   }
 }

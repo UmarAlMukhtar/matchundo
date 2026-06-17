@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { VenueSelector } from "@/components/VenueSelector";
+import { getVenuesFromScreenings, type VenueInfo } from "@/lib/venue";
 import { 
   approveScreeningAction, 
   rejectScreeningAction, 
@@ -95,7 +97,8 @@ export default function SubmissionsPanel({
   // Form values
   const [matchName, setMatchName] = useState("");
   const [venueName, setVenueName] = useState("");
-  const [city, setCity] = useState("");
+  const [citySelection, setCitySelection] = useState("");
+  const [customCity, setCustomCity] = useState("");
   const [address, setAddress] = useState("");
   const [screeningDatetime, setScreeningDatetime] = useState("");
   const [description, setDescription] = useState("");
@@ -103,6 +106,10 @@ export default function SubmissionsPanel({
   const [sport, setSport] = useState("Football");
   const [customSport, setCustomSport] = useState("");
   const [competition, setCompetition] = useState("");
+  const [customCompetition, setCustomCompetition] = useState("");
+
+  // Derive unique physical venues from screenings list
+  const venues = getVenuesFromScreenings(screenings);
 
   // Confirmation dialog states
   const [confirmDeleteScreening, setConfirmDeleteScreening] = useState<Screening | null>(null);
@@ -135,7 +142,15 @@ export default function SubmissionsPanel({
     const errors: Record<string, string> = {};
     if (!matchName.trim()) errors.matchName = "Match name is required";
     if (!venueName.trim()) errors.venueName = "Venue name is required";
-    if (!city.trim()) errors.city = "City is required";
+    
+    const finalCity = citySelection === "Other" ? customCity : citySelection;
+    if (!finalCity.trim()) {
+      errors.city = "City is required";
+    }
+    if (citySelection === "Other" && !customCity.trim()) {
+      errors.city = "Please specify the city name";
+    }
+
     if (!address.trim()) errors.address = "Address is required";
     if (!screeningDatetime) {
       errors.screeningDatetime = "Date and time is required";
@@ -151,6 +166,10 @@ export default function SubmissionsPanel({
 
     if (sport === "Other" && !customSport.trim()) {
       errors.sport = "Please specify the sport name";
+    }
+
+    if (competition === "Other" && !customCompetition.trim()) {
+      errors.competition = "Please specify the competition name";
     }
 
     setValidationErrors(errors);
@@ -204,14 +223,52 @@ export default function SubmissionsPanel({
     }
   };
 
+  // Handle venue selection from autocomplete selector
+  const handleSelectVenue = (selected: VenueInfo) => {
+    setVenueName(selected.venueName);
+    setAddress(selected.address);
+    setGoogleMapsLink(selected.googleMapsLink || "");
+    
+    // Autofill city
+    const cVal = selected.city;
+    const predefinedCities = [
+      "Kochi", "Trivandrum", "Kozhikode", "Thrissur", "Kannur",
+      "Kasaragod", "Palakkad", "Malappuram", "Kottayam", "Alappuzha",
+      "Pathanamthitta", "Kollam", "Idukki", "Wayanad", "Ernakulam"
+    ];
+    if (predefinedCities.includes(cVal)) {
+      setCitySelection(cVal);
+      setCustomCity("");
+    } else {
+      setCitySelection("Other");
+      setCustomCity(cVal);
+    }
+  };
+
   // 3. Edit Modal opener
   const openEditModal = (screening: Screening) => {
     setEditingScreening(screening);
     setMatchName(screening.match_name);
     setVenueName(screening.venue_name);
-    setCity(screening.city);
     setAddress(screening.address);
-    setCompetition(screening.competition || "");
+    
+    // Map citySelection and customCity
+    const cVal = screening.city || "";
+    const predefinedCities = [
+      "Kochi", "Trivandrum", "Kozhikode", "Thrissur", "Kannur",
+      "Kasaragod", "Palakkad", "Malappuram", "Kottayam", "Alappuzha",
+      "Pathanamthitta", "Kollam", "Idukki", "Wayanad", "Ernakulam"
+    ];
+    if (predefinedCities.includes(cVal)) {
+      setCitySelection(cVal);
+      setCustomCity("");
+    } else if (cVal) {
+      setCitySelection("Other");
+      setCustomCity(cVal);
+    } else {
+      setCitySelection("");
+      setCustomCity("");
+    }
     
     const standardSports = ["Football", "Cricket", "Formula 1", "Kabaddi", "Esports"];
     if (screening.sport) {
@@ -226,6 +283,16 @@ export default function SubmissionsPanel({
       setSport("Football");
       setCustomSport("");
     }
+
+    // Map competition and customCompetition
+    const compVal = screening.competition || "";
+    if (compVal === "" || ["IPL", "ISL", "Premier League", "UEFA Champions League", "FIFA World Cup", "Cricket World Cup"].includes(compVal)) {
+      setCompetition(compVal);
+      setCustomCompetition("");
+    } else {
+      setCompetition("Other");
+      setCustomCompetition(compVal);
+    }
     
     // Format datetime-local string (YYYY-MM-DDTHH:MM)
     try {
@@ -238,7 +305,7 @@ export default function SubmissionsPanel({
     }
     
     setDescription(screening.description);
-    setGoogleMapsLink(screening.google_maps_link);
+    setGoogleMapsLink(screening.google_maps_link || "");
     setValidationErrors({});
     setIsEditModalOpen(true);
   };
@@ -251,17 +318,20 @@ export default function SubmissionsPanel({
 
     setIsSaving(true);
     const finalSport = sport === "Other" ? customSport.trim() : sport.trim();
+    const finalCity = citySelection === "Other" ? customCity.trim() : citySelection.trim();
+    const finalCompetition = competition === "Other" ? customCompetition.trim() : competition.trim();
+
     try {
       const response = await updateScreeningAction(editingScreening.id, {
         match_name: matchName.trim(),
         venue_name: venueName.trim(),
-        city: city.trim(),
+        city: finalCity,
         address: address.trim(),
         screening_datetime: screeningDatetime,
         description: description.trim(),
         google_maps_link: googleMapsLink.trim(),
         sport: finalSport || undefined,
-        competition: competition.trim() || undefined
+        competition: finalCompetition || undefined
       });
 
       if (response.success) {
@@ -755,13 +825,26 @@ export default function SubmissionsPanel({
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Competition (Optional)</label>
-                      <Input
-                        type="text"
+                      <Select
                         value={competition}
-                        onChange={(e) => setCompetition(e.target.value)}
-                        placeholder="e.g. IPL, ISL, Premier League"
+                        onChange={(e) => {
+                          setCompetition(e.target.value);
+                          if (e.target.value !== "Other") setCustomCompetition("");
+                        }}
                         className="w-full bg-zinc-950 border-zinc-900 text-xs h-9"
-                      />
+                      >
+                        <option value="">Select Competition (Optional)</option>
+                        <option value="IPL">IPL</option>
+                        <option value="ISL">ISL</option>
+                        <option value="Premier League">Premier League</option>
+                        <option value="UEFA Champions League">UEFA Champions League</option>
+                        <option value="FIFA World Cup">FIFA World Cup</option>
+                        <option value="Cricket World Cup">Cricket World Cup</option>
+                        <option value="Other">Other (Specify)</option>
+                      </Select>
+                      {validationErrors.competition && (
+                        <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.competition}</span>
+                      )}
                     </div>
                   </div>
 
@@ -780,15 +863,30 @@ export default function SubmissionsPanel({
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Venue Name</label>
+                  {/* Custom Competition Input */}
+                  {competition === "Other" && (
+                    <div className="animate-in slide-in-from-top-1 duration-150">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Specify Competition Name <span className="text-red-500">*</span></label>
                       <Input
                         type="text"
                         required
-                        value={venueName}
-                        onChange={(e) => setVenueName(e.target.value)}
+                        value={customCompetition}
+                        onChange={(e) => setCustomCompetition(e.target.value)}
+                        placeholder="e.g. La Liga, Wimbledon"
                         className="w-full bg-zinc-950 border-zinc-900 text-xs h-9"
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Venue Name</label>
+                      <VenueSelector
+                        venues={venues}
+                        value={venueName}
+                        onChange={setVenueName}
+                        onSelectVenue={handleSelectVenue}
+                        placeholder="Search or enter venue..."
                       />
                       {validationErrors.venueName && (
                         <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.venueName}</span>
@@ -796,18 +894,52 @@ export default function SubmissionsPanel({
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">City</label>
-                      <Input
-                        type="text"
-                        required
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
+                      <Select
+                        value={citySelection}
+                        onChange={(e) => {
+                          setCitySelection(e.target.value);
+                          if (e.target.value !== "Other") setCustomCity("");
+                        }}
                         className="w-full bg-zinc-950 border-zinc-900 text-xs h-9"
-                      />
+                      >
+                        <option value="">Select City</option>
+                        <option value="Kochi">Kochi</option>
+                        <option value="Trivandrum">Trivandrum</option>
+                        <option value="Kozhikode">Kozhikode</option>
+                        <option value="Thrissur">Thrissur</option>
+                        <option value="Kannur">Kannur</option>
+                        <option value="Kasaragod">Kasaragod</option>
+                        <option value="Palakkad">Palakkad</option>
+                        <option value="Malappuram">Malappuram</option>
+                        <option value="Kottayam">Kottayam</option>
+                        <option value="Alappuzha">Alappuzha</option>
+                        <option value="Pathanamthitta">Pathanamthitta</option>
+                        <option value="Kollam">Kollam</option>
+                        <option value="Idukki">Idukki</option>
+                        <option value="Wayanad">Wayanad</option>
+                        <option value="Ernakulam">Ernakulam</option>
+                        <option value="Other">Other (Specify)</option>
+                      </Select>
                       {validationErrors.city && (
                         <span className="text-[10px] text-red-500 font-medium mt-1 block">{validationErrors.city}</span>
                       )}
                     </div>
                   </div>
+
+                  {/* Custom City Input */}
+                  {citySelection === "Other" && (
+                    <div className="animate-in slide-in-from-top-1 duration-150">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Specify City Name <span className="text-red-500">*</span></label>
+                      <Input
+                        type="text"
+                        required
+                        value={customCity}
+                        onChange={(e) => setCustomCity(e.target.value)}
+                        placeholder="e.g. Kanhangad"
+                        className="w-full bg-zinc-950 border-zinc-900 text-xs h-9"
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Address</label>
