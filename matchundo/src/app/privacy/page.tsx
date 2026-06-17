@@ -76,7 +76,7 @@ export default function PrivacyPage() {
             6. User Rights & Contact
           </h2>
           <p>
-            If you wish to update, modify, correct, or permanently delete screening information you submitted or believe should be removed, please contact us at <code className="text-zinc-200">privacy@matchundo.com</code>.
+            If you wish to update, modify, correct, or permanently delete screening information you submitted or believe should be removed, please contact us at <code className="text-zinc-200">umar1868807@gmail.com</code>.
           </p>
         </section>
       </div>
