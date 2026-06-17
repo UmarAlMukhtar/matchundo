@@ -27,6 +27,7 @@ model Screening {
   
   sport             String?
   competition       String?
+  notifyByEmail     Boolean  @default(true) @map("notify_by_email")
   reports           Report[]
 
   @@map("screenings")

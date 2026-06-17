@@ -1,6 +1,15 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { MapPin, Calendar, Clock, Search } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Sports Match Screenings & Watch Parties | MatchUndo",
+  description: "Browse upcoming live match screenings, sports watch parties, and community screenings near you.",
+  alternates: {
+    canonical: "/screenings",
+  },
+};
 import { getVenueSlugMap, getVenueSlugKey, slugify } from "@/lib/venue";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

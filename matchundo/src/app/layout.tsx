@@ -4,6 +4,7 @@ import Link from "next/link";
 import "./globals.css";
 import { Button } from "@/components/ui/button";
 import { checkAdminAuth } from "@/app/actions";
+import { APP_URL } from "@/lib/config";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,15 +17,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(APP_URL),
   title: "MatchUndo - Sports Watch Parties & Match Screenings",
   description: "Discover live sports screenings, watch parties, and community match events across Kerala.",
+  alternates: {
+    canonical: "./",
+  },
   verification: {
     google: "hHEIeBNoTCe9P6swaZiwadSb2V8XQBK-ecSI3_aXyCM",
   },
   openGraph: {
     title: "MatchUndo - Sports Watch Parties & Match Screenings",
     description: "Discover live sports screenings, watch parties, and community match events across Kerala.",
-    url: "https://matchundo.vercel.app",
+    url: APP_URL,
     siteName: "MatchUndo",
     locale: "en_IN",
     type: "website",

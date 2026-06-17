@@ -4,6 +4,9 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Terms & Conditions | MatchUndo",
   description: "Review user guidelines, submission rules, and terms of service for MatchUndo.",
+  alternates: {
+    canonical: "/terms",
+  },
 };
 
 export default function TermsPage() {

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Link as LinkIcon, Check, Share2, MessageSquare, AlertTriangle } from "lucide-react";
 import { Button } from "./ui/button";
 import { trackEvent } from "@/lib/analytics";
+import { APP_URL } from "@/lib/config";
 
 interface ShareButtonProps {
   screeningId: string;
@@ -47,7 +48,7 @@ export function ShareButton({
     if (typeof window !== "undefined") {
       return `${window.location.origin}/screenings/${screeningId}`;
     }
-    return `https://matchundo.com/screenings/${screeningId}`;
+    return `${APP_URL}/screenings/${screeningId}`;
   };
 
   const formatShareDate = (isoString: string) => {

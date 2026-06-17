@@ -24,6 +24,7 @@ export interface Screening {
   reviewed_by?: string;
   sport?: string;
   competition?: string;
+  notify_by_email?: boolean;
 }
 
 export interface Report {
@@ -63,7 +64,8 @@ function mapPrismaToScreening(s: PrismaScreening): Screening {
     reviewed_at: s.reviewedAt?.toISOString() || '',
     reviewed_by: s.reviewedBy || '',
     sport: s.sport || '',
-    competition: s.competition || ''
+    competition: s.competition || '',
+    notify_by_email: s.notifyByEmail
   };
 }
 
@@ -151,7 +153,8 @@ export const db = {
           reviewedAt: data.reviewed_at ? new Date(data.reviewed_at) : null,
           reviewedBy: data.reviewed_by || null,
           sport: data.sport || null,
-          competition: data.competition || null
+          competition: data.competition || null,
+          notifyByEmail: data.notify_by_email !== undefined ? data.notify_by_email : true
         }
       });
       return mapPrismaToScreening(s);
@@ -180,6 +183,7 @@ export const db = {
       if (data.reviewed_by !== undefined) updateData.reviewedBy = data.reviewed_by || null;
       if (data.sport !== undefined) updateData.sport = data.sport || null;
       if (data.competition !== undefined) updateData.competition = data.competition || null;
+      if (data.notify_by_email !== undefined) updateData.notifyByEmail = data.notify_by_email;
 
       const s = await prisma.screening.update({
         where: { id },

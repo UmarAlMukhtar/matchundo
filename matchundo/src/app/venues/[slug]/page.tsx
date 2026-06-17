@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { APP_URL } from "@/lib/config";
 import { getVenuesFromScreenings } from "@/lib/venue";
 import { trackPageView } from "@/lib/analytics";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -28,9 +29,27 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
+  const title = `${venue.venueName} - Watch Screenings in ${venue.city} | MatchUndo`;
+  const description = `Upcoming and past sports match screenings hosted at ${venue.venueName} in ${venue.city}, Kerala. Get directions and view schedules.`;
+  const canonicalUrl = `${APP_URL}/venues/${slug}`;
+
   return {
-    title: `${venue.venueName} - Watch Screenings in ${venue.city} | MatchUndo`,
-    description: `Upcoming and past sports match screenings hosted at ${venue.venueName} in ${venue.city}, Kerala. Get directions and view schedules.`,
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    }
   };
 }
 

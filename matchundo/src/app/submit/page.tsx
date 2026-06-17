@@ -32,6 +32,7 @@ export default function SubmitScreeningPage() {
   const [sport, setSport] = useState("Football");
   const [customSport, setCustomSport] = useState("");
   const [competition, setCompetition] = useState("");
+  const [notifyByEmail, setNotifyByEmail] = useState(true);
 
   // UI state
   const [isPending, setIsPending] = useState(false);
@@ -62,7 +63,9 @@ export default function SubmitScreeningPage() {
     }
     if (!submittedByName.trim()) errors.submittedByName = "Your name is required";
     
-    if (submittedByEmail.trim()) {
+    if (notifyByEmail && !submittedByEmail.trim()) {
+      errors.submittedByEmail = "Email is required if you want review notifications.";
+    } else if (submittedByEmail.trim()) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(submittedByEmail)) {
         errors.submittedByEmail = "Please enter a valid email address";
@@ -107,6 +110,7 @@ export default function SubmitScreeningPage() {
         submitted_by_email: submittedByEmail.trim() || undefined,
         sport: finalSport.trim() || undefined,
         competition: competition.trim() || undefined,
+        notify_by_email: notifyByEmail,
       });
 
       if (response.success) {
@@ -136,6 +140,7 @@ export default function SubmitScreeningPage() {
     setSport("Football");
     setCustomSport("");
     setCompetition("");
+    setNotifyByEmail(true);
     setErrorMsg("");
     setValidationErrors({});
     setIsSubmitted(false);
@@ -437,10 +442,11 @@ export default function SubmitScreeningPage() {
                 {/* Submitter Email */}
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
-                    Email Address (Optional)
+                    Email Address {notifyByEmail ? <span className="text-red-500">*</span> : <span className="text-zinc-650">(Optional)</span>}
                   </label>
                   <Input
                     type="email"
+                    required={notifyByEmail}
                     value={submittedByEmail}
                     onChange={(e) => setSubmittedByEmail(e.target.value)}
                     placeholder="e.g. name@domain.com"
@@ -451,6 +457,23 @@ export default function SubmitScreeningPage() {
                   )}
                 </div>
 
+              </div>
+
+              {/* Notify By Email Checkbox */}
+              <div className="flex items-center gap-2 mt-4 py-1">
+                <input
+                  type="checkbox"
+                  id="notifyByEmail"
+                  checked={notifyByEmail}
+                  onChange={(e) => setNotifyByEmail(e.target.checked)}
+                  className="h-4 w-4 rounded border-zinc-900 bg-zinc-950 accent-zinc-100 focus:ring-1 focus:ring-zinc-800 text-zinc-950 cursor-pointer"
+                />
+                <label
+                  htmlFor="notifyByEmail"
+                  className="text-xs text-zinc-400 select-none cursor-pointer"
+                >
+                  Notify me by email when this submission is reviewed
+                </label>
               </div>
             </div>
 

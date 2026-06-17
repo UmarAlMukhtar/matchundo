@@ -5,6 +5,9 @@ import { Mail } from "lucide-react";
 export const metadata: Metadata = {
   title: "Contact Us | MatchUndo",
   description: "Get in touch with MatchUndo for general inquiries or to report incorrect/inappropriate content.",
+  alternates: {
+    canonical: "/contact",
+  },
 };
 
 export default function ContactPage() {

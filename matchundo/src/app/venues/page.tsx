@@ -1,6 +1,15 @@
 import React from "react";
 import Link from "next/link";
 import { db } from "@/lib/db";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Sports Screening Venues | MatchUndo",
+  description: "Explore venues, cafes, pubs, and turf grounds hosting live match screenings and sports watch parties.",
+  alternates: {
+    canonical: "/venues",
+  },
+};
 import { getVenuesFromScreenings } from "@/lib/venue";
 import { trackPageView } from "@/lib/analytics";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";

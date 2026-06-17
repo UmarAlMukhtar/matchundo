@@ -2,10 +2,12 @@ import { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { getVenuesFromScreenings } from "@/lib/venue";
 
+import { APP_URL } from "@/lib/config";
+
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = "https://matchundo.vercel.app";
+  const baseUrl = APP_URL;
 
   // 1. Static Routes
   const staticRoutes = [

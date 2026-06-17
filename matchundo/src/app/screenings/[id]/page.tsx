@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { APP_URL } from "@/lib/config";
 import { notFound } from "next/navigation";
 import { MapPin, Calendar, Clock, ArrowLeft, ExternalLink, Map as MapIcon, Info } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -31,13 +32,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const title = `${screening.match_name} | MatchUndo`;
   const description = `Watch ${screening.match_name} at ${screening.venue_name}, ${screening.city}.`;
+  const canonicalUrl = `${APP_URL}/screenings/${id}`;
 
   return {
     title,
     description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
       title,
       description,
+      url: canonicalUrl,
       type: "website",
       images: screening.poster_image_url ? [{ url: screening.poster_image_url }] : [],
     },

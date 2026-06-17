@@ -4,6 +4,9 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Disclaimer | MatchUndo",
   description: "Read the legal disclaimer regarding third-party trademarks, event organization, and user verification.",
+  alternates: {
+    canonical: "/disclaimer",
+  },
 };
 
 export default function DisclaimerPage() {

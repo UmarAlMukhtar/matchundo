@@ -1,4 +1,5 @@
 import { MetadataRoute } from "next";
+import { APP_URL } from "@/lib/config";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -6,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: "https://matchundo.vercel.app/sitemap.xml",
+    sitemap: `${APP_URL}/sitemap.xml`,
   };
 }

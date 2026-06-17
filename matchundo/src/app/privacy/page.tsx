@@ -4,6 +4,9 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Privacy Policy | MatchUndo",
   description: "Learn how MatchUndo collects, uses, and safeguards information submitted to the platform.",
+  alternates: {
+    canonical: "/privacy",
+  },
 };
 
 export default function PrivacyPage() {
