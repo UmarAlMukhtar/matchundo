@@ -4,20 +4,23 @@ import { Pool } from 'pg';
 
 const connectionString = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/matchundo?schema=public";
 
-const pool = new Pool({
-  connectionString,
-});
+const globalForPrisma = global as unknown as {
+  prisma?: PrismaClient;
+  pool?: Pool;
+};
 
-const adapter = new PrismaPg(pool);
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
+if (!globalForPrisma.prisma) {
+  const pool = new Pool({
+    connectionString,
+  });
+  const adapter = new PrismaPg(pool);
+  
+  globalForPrisma.pool = pool;
+  globalForPrisma.prisma = new PrismaClient({
     adapter,
     log: ['error', 'warn'],
   });
+}
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+export const prisma = globalForPrisma.prisma!;
 export { PrismaClient };
