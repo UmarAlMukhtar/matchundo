@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { VenueSelector } from "@/components/VenueSelector";
 import { getVenuesFromScreenings, type VenueInfo } from "@/lib/venue";
+import { formatScreeningDate, formatFullDateTime } from "@/lib/date";
 import { 
   approveScreeningAction, 
   rejectScreeningAction, 
@@ -40,15 +41,7 @@ interface SubmissionsPanelProps {
 
 function formatScreeningDateTime(isoString: string) {
   try {
-    const d = new Date(isoString);
-    return d.toLocaleDateString("en-IN", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true
-    });
+    return formatFullDateTime(isoString);
   } catch {
     return "TBD";
   }
@@ -487,11 +480,12 @@ export default function SubmissionsPanel({
                           Reported: {report.reason}
                         </span>
                         <span className="text-zinc-550 text-[10px]">
-                          {new Date(report.created_at).toLocaleDateString("en-IN", {
+                          {formatScreeningDate(report.created_at, {
                             day: "numeric",
                             month: "short",
                             hour: "2-digit",
-                            minute: "2-digit"
+                            minute: "2-digit",
+                            hour12: true
                           })}
                         </span>
                       </div>
@@ -676,7 +670,7 @@ export default function SubmissionsPanel({
                     {/* Review details */}
                     {screening.reviewed_at && (
                       <div className="text-[9px] text-zinc-600 border-t border-zinc-900/40 pt-2 flex items-center gap-1">
-                        <span>Reviewed on {new Date(screening.reviewed_at).toLocaleDateString()} by {screening.reviewed_by}</span>
+                        <span>Reviewed on {formatScreeningDate(screening.reviewed_at, { day: "numeric", month: "short", year: "numeric" })} by {screening.reviewed_by}</span>
                       </div>
                     )}
                   </div>

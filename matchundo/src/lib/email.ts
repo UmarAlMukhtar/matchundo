@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { Screening } from "./db";
 
 import { APP_URL } from "./config";
+import { formatLongDateTime } from "./date";
 
 const resendApiKey = process.env.RESEND_API_KEY;
 // Initialize Resend client if key is provided, otherwise log warning
@@ -38,6 +39,10 @@ export async function sendAdminNotification(screening: Screening): Promise<boole
             <tr>
               <td style="padding: 6px 0; font-weight: bold; color: #78716c; width: 120px;">Match Name:</td>
               <td style="padding: 6px 0;">${screening.match_name}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-weight: bold; color: #78716c;">Date & Time (IST):</td>
+              <td style="padding: 6px 0;">${formatLongDateTime(screening.screening_datetime)}</td>
             </tr>
             <tr>
               <td style="padding: 6px 0; font-weight: bold; color: #78716c;">Venue:</td>
@@ -86,7 +91,8 @@ export async function sendApprovalNotification(
   toEmail: string,
   matchName: string,
   venueName: string,
-  screeningId: string
+  screeningId: string,
+  screeningDatetime?: string
 ): Promise<boolean> {
   if (!resend) {
     console.warn("[Email Service] Resend is not configured. Skipped sending approval notification.");
@@ -110,6 +116,12 @@ export async function sendApprovalNotification(
               <td style="padding: 6px 0; font-weight: bold; color: #78716c; width: 120px;">Match Name:</td>
               <td style="padding: 6px 0;">${matchName}</td>
             </tr>
+            ${screeningDatetime ? `
+            <tr>
+              <td style="padding: 6px 0; font-weight: bold; color: #78716c;">Date & Time (IST):</td>
+              <td style="padding: 6px 0;">${formatLongDateTime(screeningDatetime)}</td>
+            </tr>
+            ` : ""}
             <tr>
               <td style="padding: 6px 0; font-weight: bold; color: #78716c;">Venue:</td>
               <td style="padding: 6px 0;">${venueName}</td>
@@ -148,7 +160,8 @@ export async function sendRejectionNotification(
   toEmail: string,
   matchName: string,
   venueName: string,
-  explanation?: string
+  explanation?: string,
+  screeningDatetime?: string
 ): Promise<boolean> {
   if (!resend) {
     console.warn("[Email Service] Resend is not configured. Skipped sending rejection notification.");
@@ -167,7 +180,7 @@ export async function sendRejectionNotification(
         <div style="font-family: sans-serif; max-width: 600px; color: #1c1917; line-height: 1.5;">
           <h2 style="font-size: 16px; font-weight: bold; color: #b91c1c; margin-bottom: 16px;">Submission Update</h2>
           <p>Hi there,</p>
-          <p>Thank you for submitting your watch party schedule to MatchUndo. Our moderation team has reviewed the listing for <strong>${matchName}</strong> at <strong>${venueName}</strong>.</p>
+          <p>Thank you for submitting your watch party schedule to MatchUndo. Our moderation team has reviewed the listing for <strong>${matchName}</strong>${screeningDatetime ? ` scheduled for <strong>${formatLongDateTime(screeningDatetime)} (IST)</strong>` : ""} at <strong>${venueName}</strong>.</p>
           <p>Unfortunately, we are unable to publish this listing at this time for the following reason:</p>
           <blockquote style="margin: 16px 0; padding: 12px 16px; border-left: 4px solid #b91c1c; background-color: #fef2f2; color: #991b1b; font-size: 13px; border-radius: 0 6px 6px 0;">
             ${reasonText}

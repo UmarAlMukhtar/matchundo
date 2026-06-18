@@ -10,19 +10,12 @@ import { getVenueSlugMap, getVenueSlugKey, slugify } from "@/lib/venue";
 
 export const dynamic = "force-dynamic";
 
+import { formatShortDate, formatShortTime } from "@/lib/date";
+
 function formatScreeningDate(isoString: string) {
   try {
-    const d = new Date(isoString);
-    const dateStr = d.toLocaleDateString("en-IN", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-    });
-    const timeStr = d.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
+    const dateStr = formatShortDate(isoString);
+    const timeStr = formatShortTime(isoString);
     return { dateStr, timeStr };
   } catch {
     return { dateStr: "TBD", timeStr: "TBD" };

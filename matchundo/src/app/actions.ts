@@ -231,7 +231,8 @@ export async function approveScreeningAction(
             result.submitted_by_email,
             result.match_name,
             result.venue_name,
-            result.id
+            result.id,
+            result.screening_datetime
           ).catch(err => {
             console.error("[Email Service Error] Failed to send approval email:", err);
           });
@@ -287,7 +288,8 @@ export async function rejectScreeningAction(
               result.submitted_by_email!,
               result.match_name,
               result.venue_name,
-              notes
+              notes,
+              result.screening_datetime
             );
             if (success) {
               console.log(`[Email] Rejection email sent to ${result.submitted_by_email}`);

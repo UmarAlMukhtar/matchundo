@@ -4,6 +4,7 @@ import { checkAdminAuth } from "@/app/actions";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { BarChart3, Database, ShieldAlert, CheckSquare, Layers, MapPin, Activity, Clock } from "lucide-react";
+import { formatScreeningDate } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
 
@@ -217,11 +218,12 @@ export default async function AdminAnalyticsPage() {
                             {screeningName}
                           </td>
                           <td className="py-2.5 px-2 text-zinc-500">
-                            {new Date(event.created_at).toLocaleString("en-IN", {
+                            {formatScreeningDate(event.created_at, {
                               day: "2-digit",
                               month: "short",
                               hour: "2-digit",
-                              minute: "2-digit"
+                              minute: "2-digit",
+                              hour12: true
                             })}
                           </td>
                           <td className="py-2.5 px-2 text-zinc-500 max-w-[200px] truncate">

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
+import Script from "next/script";
 import { Button } from "@/components/ui/button";
 import { checkAdminAuth } from "@/app/actions";
 import { APP_URL } from "@/lib/config";
@@ -54,6 +55,11 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100 selection:bg-zinc-800 selection:text-zinc-100">
+        <Script
+          src="https://static.cloudflareinsights.com/beacon.min.js"
+          strategy="afterInteractive"
+          data-cf-beacon='{"token":"2946b9b6e15d4f7491f307f4b18ae756"}'
+        />
         {/* Navigation Bar */}
         <header className="sticky top-0 z-50 w-full border-b border-zinc-900/60 bg-zinc-950/80 backdrop-blur-md">
           <div className="mx-auto flex max-w-5xl h-14 items-center justify-between px-4 sm:px-6 lg:px-8">

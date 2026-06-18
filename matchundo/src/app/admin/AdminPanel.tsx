@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Screening } from '@/lib/db';
 import { VenueSelector } from '@/components/VenueSelector';
 import { getVenuesFromScreenings, type VenueInfo } from '@/lib/venue';
+import { formatShortDate, formatShortTime } from '@/lib/date';
 import {
   loginAdmin,
   logoutAdmin,
@@ -504,11 +505,11 @@ export default function AdminPanel({
                     <td className="py-3 px-5">
                       <div className="flex items-center gap-1.5 text-zinc-400">
                         <Calendar className="h-3.5 w-3.5 text-zinc-600" />
-                        <span>{new Date(s.screening_datetime).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' })}</span>
+                        <span>{formatShortDate(s.screening_datetime)}</span>
                       </div>
                       <div className="text-[10px] text-zinc-500 mt-0.5 flex items-center gap-1">
                         <Clock className="h-3.5 w-3.5 text-zinc-650" />
-                        <span>{new Date(s.screening_datetime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                        <span>{formatShortTime(s.screening_datetime)}</span>
                       </div>
                     </td>
                     <td className="py-3 px-5 text-right">

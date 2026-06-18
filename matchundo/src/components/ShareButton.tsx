@@ -5,6 +5,7 @@ import { Link as LinkIcon, Check, Share2, MessageSquare, AlertTriangle } from "l
 import { Button } from "./ui/button";
 import { trackEvent } from "@/lib/analytics";
 import { APP_URL } from "@/lib/config";
+import { formatScreeningDate } from "@/lib/date";
 
 interface ShareButtonProps {
   screeningId: string;
@@ -53,8 +54,7 @@ export function ShareButton({
 
   const formatShareDate = (isoString: string) => {
     try {
-      const d = new Date(isoString);
-      return d.toLocaleDateString("en-IN", {
+      return formatScreeningDate(isoString, {
         day: "numeric",
         month: "long",
         year: "numeric"

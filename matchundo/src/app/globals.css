@@ -44,8 +44,8 @@ body {
 
 /* Custom react-day-picker dark SaaS styles */
 .rdp-custom {
-  --rdp-accent-color: #f4f4f5 !important;
-  --rdp-accent-text-color: #09090b !important;
+  --rdp-accent-color: #3b82f6 !important; /* Blue-500 accent color */
+  --rdp-accent-background-color: rgba(59, 130, 246, 0.1) !important;
   --rdp-background-color: #18181b !important;
 }
 
@@ -59,10 +59,24 @@ body {
   color: #f4f4f5 !important;
 }
 
+/* Selected Day Cell - Remove container background completely */
 .rdp-custom .rdp-selected {
-  background-color: #f4f4f5 !important;
-  color: #09090b !important;
+  background-color: transparent !important;
+  border-radius: 0 !important;
+}
+
+/* Selected Day Button - Style as a single clean blue accent circle with white text */
+.rdp-custom .rdp-selected .rdp-day_button {
+  background-color: #2563eb !important; /* Blue-600 circle */
+  color: #ffffff !important; /* White text */
+  border-radius: 50% !important;
+  border: 2px solid #2563eb !important;
   font-weight: bold !important;
+}
+
+.rdp-custom .rdp-selected .rdp-day_button:hover {
+  background-color: #1d4ed8 !important; /* Blue-700 on hover */
+  border-color: #1d4ed8 !important;
 }
 
 .rdp-custom .rdp-today {

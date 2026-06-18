@@ -56,20 +56,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
+import { formatScreeningDate, formatShortTime } from "@/lib/date";
+
 function formatScreeningDateTime(isoString: string) {
   try {
-    const d = new Date(isoString);
-    const dateStr = d.toLocaleDateString("en-IN", {
+    const dateStr = formatScreeningDate(isoString, {
       weekday: "long",
       day: "numeric",
       month: "long",
       year: "numeric"
     });
-    const timeStr = d.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
+    const timeStr = formatShortTime(isoString);
     return { dateStr, timeStr };
   } catch {
     return { dateStr: "TBD", timeStr: "TBD" };

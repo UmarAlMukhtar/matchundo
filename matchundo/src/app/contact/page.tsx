@@ -30,7 +30,7 @@ export default function ContactPage() {
           <div>
             <h2 className="text-sm font-semibold text-zinc-200">Email Address</h2>
             <p className="mt-1 text-zinc-500">For all inquiries, please reach out to us at:</p>
-            <p className="mt-2 text-zinc-200 font-mono font-bold text-xs select-all">umar1868807@gmail.com</p>
+            <p className="mt-2 text-zinc-200 font-mono font-bold text-xs select-all">admin@matchundo.demosnap.tech</p>
           </div>
         </div>
 
