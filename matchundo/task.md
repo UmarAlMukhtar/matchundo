@@ -84,3 +84,27 @@
 - [x] Integrate timezone-aware formatters inside Resend email layouts.
 - [x] Polish custom calendar highlight to use a single clean circle and remove surrounding box.
 - [x] Verify production build, linting checks, and integration tests pass successfully.
+
+# Security Hardening Checklist
+- [x] Integrate Cloudflare Turnstile explicitly (Client React loader + Server-side API verification).
+- [x] Configure IP-based rate limiting for public submissions, report submissions, and share events tracking.
+- [x] Implement comprehensive input string trimming, character length validation, and empty field rejects.
+- [x] Build parsed URL protocol schema validation allowing only http/https links and rejecting other protocols like `javascript:`.
+- [x] Mitigate XSS vulnerabilities inside JSON-LD blocks in `screenings/[id]/page.tsx` by escaping opening angle brackets (`<`).
+- [x] Setup global HTTP security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy) and strict Content Security Policy (CSP) allowing Next.js, Cloudflare, and Turnstile domains.
+- [x] Audit the `matchundo_admin_token` authentication cookie to ensure `HttpOnly`, `Secure` in production, and `SameSite=Strict`.
+- [x] Perform dependency security audit via `pnpm audit` and confirm zero critical/high vulnerabilities.
+- [x] Verify that log messages avoid printing passwords, environment variables, or private API secret keys.
+- [x] Ensure that both compilation build and ESLint lint checks pass cleanly.
+
+# Turnstile Debugging Checklist
+- [x] Refactor Turnstile.tsx to read NEXT_PUBLIC_TURNSTILE_SITE_KEY and include temporary debug logging.
+- [x] Remove any server-side key-retrieval attempts, and verify Turnstile.tsx is directly mounted on /submit and ReportButton.
+- [x] Update next.config.ts CSP connect-src rule to allow https://cloudflareinsights.com.
+- [x] Verify build compiles and ESLint passes cleanly.
+
+# Local Turnstile Test Keys Checklist
+- [x] Update client-side Turnstile.tsx to use Cloudflare Turnstile test site key in development environment.
+- [x] Update server-side turnstile.ts to use Cloudflare Turnstile test secret key in development environment.
+- [x] Run build and lint checks to verify compilation.
+

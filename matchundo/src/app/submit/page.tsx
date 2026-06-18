@@ -13,6 +13,7 @@ import { CheckCircle, ArrowRight, Loader2, AlertCircle, Info } from "lucide-reac
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { VenueSelector } from "@/components/VenueSelector";
 import { type VenueInfo } from "@/lib/venue";
+import { Turnstile } from "@/components/Turnstile";
 
 export default function SubmitScreeningPage() {
   const [venues, setVenues] = useState<VenueInfo[]>([]);
@@ -41,6 +42,7 @@ export default function SubmitScreeningPage() {
   const [competition, setCompetition] = useState("");
   const [customCompetition, setCustomCompetition] = useState("");
   const [notifyByEmail, setNotifyByEmail] = useState(true);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   // UI state
   const [isPending, setIsPending] = useState(false);
@@ -133,7 +135,7 @@ export default function SubmitScreeningPage() {
         sport: finalSport.trim() || undefined,
         competition: finalCompetition.trim() || undefined,
         notify_by_email: notifyByEmail,
-      });
+      }, turnstileToken);
 
       if (response.success) {
         setIsSubmitted(true);
@@ -547,6 +549,18 @@ export default function SubmitScreeningPage() {
                 </label>
               </div>
             </div>
+
+            {/* Turnstile Widget */}
+            {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+              <div className="py-2 border-t border-zinc-900/40">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
+                  Security Verification <span className="text-red-500">*</span>
+                </label>
+                <div className="flex justify-center sm:justify-start">
+                  <Turnstile onVerify={setTurnstileToken} />
+                </div>
+              </div>
+            )}
 
             {/* Submission Error message */}
             {errorMsg && (

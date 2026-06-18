@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { ShieldAlert, Loader2, CheckCircle, AlertTriangle, X } from "lucide-react";
 import { createReportAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
+import { Turnstile } from "@/components/Turnstile";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 
@@ -18,6 +19,7 @@ export function ReportButton({ screeningId }: ReportButtonProps) {
   const [isPending, setIsPending] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +27,7 @@ export function ReportButton({ screeningId }: ReportButtonProps) {
     setIsPending(true);
 
     try {
-      const result = await createReportAction(screeningId, reason, notes.trim());
+      const result = await createReportAction(screeningId, reason, notes.trim(), turnstileToken);
       if (result.success) {
         setIsSubmitted(true);
         setTimeout(() => {
@@ -121,6 +123,17 @@ export function ReportButton({ screeningId }: ReportButtonProps) {
                     className="w-full bg-zinc-950 border-zinc-900 text-xs"
                   />
                 </div>
+
+                {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+                  <div className="py-2 border-t border-zinc-900/40">
+                    <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                      Security Verification <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex justify-center">
+                      <Turnstile onVerify={setTurnstileToken} />
+                    </div>
+                  </div>
+                )}
 
                 {errorMsg && (
                   <div className="p-2.5 bg-red-950/20 border border-red-900/10 text-red-400 rounded-md text-[10px] flex gap-1.5">

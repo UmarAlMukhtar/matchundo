@@ -1,10 +1,12 @@
 'use server';
 
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { db, Screening } from '@/lib/db';
 import { revalidatePath as nextRevalidatePath } from 'next/cache';
 import { trackEvent } from '@/lib/analytics';
 import { getVenuesFromScreenings, type VenueInfo } from '@/lib/venue';
+import { checkRateLimit } from '@/lib/rateLimit';
+import { verifyTurnstileToken } from '@/lib/turnstile';
 
 function revalidatePath(path: string) {
   try {
@@ -18,6 +20,33 @@ function revalidatePath(path: string) {
   }
 }
 import { sendAdminNotification, sendApprovalNotification, sendRejectionNotification } from '@/lib/email';
+
+function isValidUrl(value: string | null | undefined): boolean {
+  if (!value || !value.trim()) return true;
+  const trimmed = value.trim();
+  try {
+    const url = new URL(trimmed);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+async function getClientIp(): Promise<string> {
+  try {
+    const headerList = await headers();
+    const xForwardedFor = headerList.get("x-forwarded-for");
+    if (xForwardedFor) {
+      return xForwardedFor.split(",")[0].trim();
+    }
+    const xRealIp = headerList.get("x-real-ip");
+    if (xRealIp) return xRealIp;
+    return "127.0.0.1";
+  } catch (error) {
+    console.error("Failed to get client IP:", error);
+    return "127.0.0.1";
+  }
+}
 
 const ADMIN_COOKIE_NAME = 'matchundo_admin_token';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
@@ -65,9 +94,40 @@ export async function createScreeningAction(
     return { success: false, error: 'Unauthorized. Please login.' };
   }
 
-  // Input validation
-  if (!data.match_name || !data.venue_name || !data.city || !data.address || !data.screening_datetime) {
+  // String Trimming & Presence check
+  const matchName = (data.match_name || '').trim();
+  const venueName = (data.venue_name || '').trim();
+  const city = (data.city || '').trim();
+  const address = (data.address || '').trim();
+  const description = (data.description || '').trim();
+  const googleMapsLink = (data.google_maps_link || '').trim();
+  const posterImageUrl = (data.poster_image_url || '').trim();
+  const sport = (data.sport || '').trim();
+  const competition = (data.competition || '').trim();
+  const submittedByName = (data.submitted_by_name || '').trim();
+  const submittedByEmail = (data.submitted_by_email || '').trim();
+
+  if (!matchName || !venueName || !city || !address || !data.screening_datetime) {
     return { success: false, error: 'Missing required screening fields.' };
+  }
+
+  // Input Length validation
+  if (matchName.length > 150) return { success: false, error: 'Match name cannot exceed 150 characters.' };
+  if (venueName.length > 120) return { success: false, error: 'Venue name cannot exceed 120 characters.' };
+  if (city.length > 80) return { success: false, error: 'City cannot exceed 80 characters.' };
+  if (sport.length > 80) return { success: false, error: 'Sport name cannot exceed 80 characters.' };
+  if (competition.length > 120) return { success: false, error: 'Competition name cannot exceed 120 characters.' };
+  if (address.length > 300) return { success: false, error: 'Address cannot exceed 300 characters.' };
+  if (description.length > 2000) return { success: false, error: 'Description cannot exceed 2000 characters.' };
+  if (submittedByName.length > 120) return { success: false, error: 'Submitted by name cannot exceed 120 characters.' };
+  if (submittedByEmail.length > 255) return { success: false, error: 'Submitted by email cannot exceed 255 characters.' };
+
+  // URL checks
+  if (googleMapsLink && !isValidUrl(googleMapsLink)) {
+    return { success: false, error: 'Google Maps link must be a valid HTTP/HTTPS URL.' };
+  }
+  if (posterImageUrl && !isValidUrl(posterImageUrl)) {
+    return { success: false, error: 'Poster image URL must be a valid HTTP/HTTPS URL.' };
   }
 
   if (new Date(data.screening_datetime) < new Date()) {
@@ -77,6 +137,17 @@ export async function createScreeningAction(
   try {
     const result = await db.createScreening({
       ...data,
+      match_name: matchName,
+      venue_name: venueName,
+      city: city,
+      address: address,
+      description: description,
+      google_maps_link: googleMapsLink,
+      poster_image_url: posterImageUrl,
+      submitted_by_name: submittedByName || undefined,
+      submitted_by_email: submittedByEmail || undefined,
+      sport: sport || undefined,
+      competition: competition || undefined,
       status: 'approved' // Admin created screenings are approved by default
     });
     if (result) {
@@ -106,6 +177,44 @@ export async function updateScreeningAction(
     return { success: false, error: 'Unauthorized. Please login.' };
   }
 
+  // Trim and validate fields if they are provided
+  const matchName = data.match_name !== undefined ? data.match_name.trim() : undefined;
+  const venueName = data.venue_name !== undefined ? data.venue_name.trim() : undefined;
+  const city = data.city !== undefined ? data.city.trim() : undefined;
+  const address = data.address !== undefined ? data.address.trim() : undefined;
+  const description = data.description !== undefined ? data.description.trim() : undefined;
+  const googleMapsLink = data.google_maps_link !== undefined ? data.google_maps_link.trim() : undefined;
+  const posterImageUrl = data.poster_image_url !== undefined ? data.poster_image_url.trim() : undefined;
+  const sport = data.sport !== undefined ? data.sport.trim() : undefined;
+  const competition = data.competition !== undefined ? data.competition.trim() : undefined;
+  const submittedByName = data.submitted_by_name !== undefined ? data.submitted_by_name.trim() : undefined;
+  const submittedByEmail = data.submitted_by_email !== undefined ? data.submitted_by_email.trim() : undefined;
+
+  // Empty checks for mandatory fields if provided
+  if (matchName === '') return { success: false, error: 'Match name cannot be empty.' };
+  if (venueName === '') return { success: false, error: 'Venue name cannot be empty.' };
+  if (city === '') return { success: false, error: 'City cannot be empty.' };
+  if (address === '') return { success: false, error: 'Address cannot be empty.' };
+
+  // Length checks
+  if (matchName && matchName.length > 150) return { success: false, error: 'Match name cannot exceed 150 characters.' };
+  if (venueName && venueName.length > 120) return { success: false, error: 'Venue name cannot exceed 120 characters.' };
+  if (city && city.length > 80) return { success: false, error: 'City cannot exceed 80 characters.' };
+  if (sport && sport.length > 80) return { success: false, error: 'Sport name cannot exceed 80 characters.' };
+  if (competition && competition.length > 120) return { success: false, error: 'Competition name cannot exceed 120 characters.' };
+  if (address && address.length > 300) return { success: false, error: 'Address cannot exceed 300 characters.' };
+  if (description && description.length > 2000) return { success: false, error: 'Description cannot exceed 2000 characters.' };
+  if (submittedByName && submittedByName.length > 120) return { success: false, error: 'Submitted by name cannot exceed 120 characters.' };
+  if (submittedByEmail && submittedByEmail.length > 255) return { success: false, error: 'Submitted by email cannot exceed 255 characters.' };
+
+  // URL checks
+  if (googleMapsLink && !isValidUrl(googleMapsLink)) {
+    return { success: false, error: 'Google Maps link must be a valid HTTP/HTTPS URL.' };
+  }
+  if (posterImageUrl && !isValidUrl(posterImageUrl)) {
+    return { success: false, error: 'Poster image URL must be a valid HTTP/HTTPS URL.' };
+  }
+
   if (data.screening_datetime !== undefined) {
     if (new Date(data.screening_datetime) < new Date()) {
       return { success: false, error: 'Screening date must be in the future.' };
@@ -113,7 +222,22 @@ export async function updateScreeningAction(
   }
 
   try {
-    const result = await db.updateScreening(id, data);
+    const updatedData: Partial<Omit<Screening, 'id'>> = {
+      ...data,
+    };
+    if (matchName !== undefined) updatedData.match_name = matchName;
+    if (venueName !== undefined) updatedData.venue_name = venueName;
+    if (city !== undefined) updatedData.city = city;
+    if (address !== undefined) updatedData.address = address;
+    if (description !== undefined) updatedData.description = description;
+    if (googleMapsLink !== undefined) updatedData.google_maps_link = googleMapsLink;
+    if (posterImageUrl !== undefined) updatedData.poster_image_url = posterImageUrl;
+    if (sport !== undefined) updatedData.sport = sport;
+    if (competition !== undefined) updatedData.competition = competition;
+    if (submittedByName !== undefined) updatedData.submitted_by_name = submittedByName;
+    if (submittedByEmail !== undefined) updatedData.submitted_by_email = submittedByEmail;
+
+    const result = await db.updateScreening(id, updatedData);
     if (result) {
       revalidatePath('/');
       revalidatePath('/screenings');
@@ -156,15 +280,56 @@ export async function deleteScreeningAction(
 
 // Action for public submission of watch parties
 export async function submitScreeningAction(
-  data: Omit<Screening, 'id' | 'status' | 'reviewed_at' | 'reviewed_by'>
+  data: Omit<Screening, 'id' | 'status' | 'reviewed_at' | 'reviewed_by'>,
+  turnstileToken?: string
 ): Promise<{ success: boolean; screening?: Screening | null; error?: string }> {
-  // Input validation
-  if (!data.match_name || !data.venue_name || !data.city || !data.address || !data.screening_datetime || !data.submitted_by_name) {
+  // 1. Rate Limiting check
+  const ip = await getClientIp();
+  const rateLimit = checkRateLimit(ip, 'public_submission', 5, 60 * 60 * 1000);
+  if (!rateLimit.success) {
+    return { success: false, error: rateLimit.error };
+  }
+
+  // 2. Cloudflare Turnstile token validation
+  const isHuman = await verifyTurnstileToken(turnstileToken, ip);
+  if (!isHuman) {
+    return { success: false, error: 'Verification failed. Please try again.' };
+  }
+
+  // 3. String Trimming & Presence checks
+  const matchName = (data.match_name || '').trim();
+  const venueName = (data.venue_name || '').trim();
+  const city = (data.city || '').trim();
+  const address = (data.address || '').trim();
+  const description = (data.description || '').trim();
+  const googleMapsLink = (data.google_maps_link || '').trim();
+  const submittedByName = (data.submitted_by_name || '').trim();
+  const submittedByEmail = (data.submitted_by_email || '').trim();
+  const sport = (data.sport || '').trim();
+  const competition = (data.competition || '').trim();
+
+  if (!matchName || !venueName || !city || !address || !data.screening_datetime || !submittedByName) {
     return { success: false, error: 'Missing required screening fields.' };
   }
 
-  if (data.notify_by_email && (!data.submitted_by_email || !data.submitted_by_email.trim())) {
+  if (data.notify_by_email && !submittedByEmail) {
     return { success: false, error: 'Email is required if review notifications are enabled.' };
+  }
+
+  // 4. Input Length validation
+  if (matchName.length > 150) return { success: false, error: 'Match name cannot exceed 150 characters.' };
+  if (venueName.length > 120) return { success: false, error: 'Venue name cannot exceed 120 characters.' };
+  if (city.length > 80) return { success: false, error: 'City cannot exceed 80 characters.' };
+  if (sport.length > 80) return { success: false, error: 'Sport name cannot exceed 80 characters.' };
+  if (competition.length > 120) return { success: false, error: 'Competition name cannot exceed 120 characters.' };
+  if (address.length > 300) return { success: false, error: 'Address cannot exceed 300 characters.' };
+  if (description.length > 2000) return { success: false, error: 'Description cannot exceed 2000 characters.' };
+  if (submittedByName.length > 120) return { success: false, error: 'Your name cannot exceed 120 characters.' };
+  if (submittedByEmail.length > 255) return { success: false, error: 'Email address cannot exceed 255 characters.' };
+
+  // 5. URL validation
+  if (googleMapsLink && !isValidUrl(googleMapsLink)) {
+    return { success: false, error: 'Google Maps link must be a valid HTTP/HTTPS URL.' };
   }
 
   if (new Date(data.screening_datetime) < new Date()) {
@@ -174,12 +339,22 @@ export async function submitScreeningAction(
   try {
     const result = await db.createScreening({
       ...data,
+      match_name: matchName,
+      venue_name: venueName,
+      city: city,
+      address: address,
+      description: description,
+      google_maps_link: googleMapsLink,
+      submitted_by_name: submittedByName,
+      submitted_by_email: submittedByEmail || undefined,
+      sport: sport || undefined,
+      competition: competition || undefined,
       status: 'pending' // Public submissions are pending by default
     });
     
     if (result) {
       // 1. Log moderation event in DB
-      await db.createModerationEvent(result.id, 'submission_created', `Submitted by ${data.submitted_by_name}`);
+      await db.createModerationEvent(result.id, 'submission_created', `Submitted by ${submittedByName}`);
       
       // 2. Send email notification to site administrator
       try {
@@ -317,13 +492,41 @@ export async function rejectScreeningAction(
 }
 
 // Action to create user report for listing
+// Action to create user report for listing
 export async function createReportAction(
   screeningId: string,
   reason: string,
-  notes?: string
+  notes?: string,
+  turnstileToken?: string
 ): Promise<{ success: boolean; error?: string }> {
+  // 1. Rate Limiting check
+  const ip = await getClientIp();
+  const rateLimit = checkRateLimit(ip, 'report_submission', 10, 60 * 60 * 1000);
+  if (!rateLimit.success) {
+    return { success: false, error: rateLimit.error };
+  }
+
+  // 2. Cloudflare Turnstile token validation
+  const isHuman = await verifyTurnstileToken(turnstileToken, ip);
+  if (!isHuman) {
+    return { success: false, error: 'Verification failed. Please try again.' };
+  }
+
+  // 3. String Trimming & Presence checks
+  const trimmedReason = (reason || '').trim();
+  const trimmedNotes = (notes || '').trim();
+
+  if (!trimmedReason) {
+    return { success: false, error: 'Reason is required.' };
+  }
+
+  // 4. Input Length validation
+  if (trimmedNotes.length > 1000) {
+    return { success: false, error: 'Report notes cannot exceed 1000 characters.' };
+  }
+
   try {
-    const success = await db.createReport(screeningId, reason, notes);
+    const success = await db.createReport(screeningId, trimmedReason, trimmedNotes);
     if (success) {
       trackEvent('report_submitted', { id: screeningId });
       revalidatePath('/admin/submissions');
@@ -374,6 +577,13 @@ export async function logShareEventAction(
   screeningId: string,
   shareType: string
 ): Promise<{ success: boolean; error?: string }> {
+  // 1. Rate Limiting check
+  const ip = await getClientIp();
+  const rateLimit = checkRateLimit(ip, 'share_tracking', 100, 60 * 60 * 1000);
+  if (!rateLimit.success) {
+    return { success: false, error: rateLimit.error };
+  }
+
   try {
     const success = await db.createShareEvent(screeningId, shareType);
     if (success) {
