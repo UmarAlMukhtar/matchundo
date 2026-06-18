@@ -68,6 +68,16 @@
 - [x] Refactor Submissions moderation panel edit form to support autocomplete, autofill, and custom select selectors.
 - [x] Run production compilation, ESLint, and integration tests to confirm compile-readiness.
 
+# MatchUndo Analytics Upgrade Checklist
+- [x] Update database schema (`prisma/schema.prisma`) with `ShareEvent` model.
+- [x] Push database schema changes locally (`pnpm exec prisma db push`).
+- [x] Update database client layer (`src/lib/db.ts`) with new interface properties, mappers, and methods for share events.
+- [x] Implement Server Action `logShareEventAction` in `src/app/actions.ts`.
+- [x] Refactor client-side `ShareButton` component (`src/components/ShareButton.tsx`) to invoke `logShareEventAction`.
+- [x] Redesign `/admin/analytics` page (`src/app/admin/analytics/page.tsx`) with the four specified sections (Overview, Community, Growth, Cloudflare).
+- [x] Verify build and lint checks pass cleanly.
+
+
 # Timezone Rendering & Date Picker Polish Checklist
 - [x] Create shared date formatting helper (`src/lib/date.ts`) to render in `Asia/Kolkata` (IST) timezone.
 - [x] Replace all raw localized date and time formatting calls across listings, detail pages, venue pages, admin forms, and analytics lists.

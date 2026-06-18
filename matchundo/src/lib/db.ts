@@ -45,6 +45,14 @@ export interface ModerationEvent {
   created_at: string;
 }
 
+export interface ShareEvent {
+  id: string;
+  screening_id: string;
+  share_type: string;
+  created_at: string;
+}
+
+
 // Mapper to convert Prisma models back to the snake_case frontend interface
 function mapPrismaToScreening(s: PrismaScreening): Screening {
   return {
@@ -304,6 +312,42 @@ export const db = {
     } catch (error) {
       console.error(`Error deleting user report ${id} in Prisma:`, error);
       return false;
+    }
+  },
+
+  // Create a share event
+  async createShareEvent(screeningId: string, shareType: string): Promise<boolean> {
+    try {
+      await prisma.shareEvent.create({
+        data: {
+          screeningId,
+          shareType
+        }
+      });
+      return true;
+    } catch (error) {
+      console.error(`Error creating share event for screening ${screeningId}:`, error);
+      return false;
+    }
+  },
+
+  // Fetch all share events
+  async getShareEvents(): Promise<ShareEvent[]> {
+    try {
+      const items = await prisma.shareEvent.findMany({
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+      return items.map(item => ({
+        id: item.id,
+        screening_id: item.screeningId,
+        share_type: item.shareType,
+        created_at: item.createdAt.toISOString()
+      }));
+    } catch (error) {
+      console.error('Error fetching share events from Prisma:', error);
+      return [];
     }
   }
 };

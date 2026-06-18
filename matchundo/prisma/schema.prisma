@@ -29,6 +29,7 @@ model Screening {
   competition       String?
   notifyByEmail     Boolean  @default(true) @map("notify_by_email")
   reports           Report[]
+  shareEvents       ShareEvent[]
 
   @@map("screenings")
 }
@@ -55,3 +56,15 @@ model ModerationEvent {
 
   @@map("moderation_events")
 }
+
+model ShareEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  screeningId String   @map("screening_id") @db.Uuid
+  shareType   String   @map("share_type") // copy_link, whatsapp_share, native_share, telegram_share, instagram_share
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  screening   Screening @relation(fields: [screeningId], references: [id], onDelete: Cascade)
+
+  @@map("share_events")
+}
+

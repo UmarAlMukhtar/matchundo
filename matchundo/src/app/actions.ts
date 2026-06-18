@@ -325,6 +325,7 @@ export async function createReportAction(
   try {
     const success = await db.createReport(screeningId, reason, notes);
     if (success) {
+      trackEvent('report_submitted', { id: screeningId });
       revalidatePath('/admin/submissions');
       return { success: true };
     }
@@ -365,5 +366,22 @@ export async function getApprovedVenuesAction(): Promise<VenueInfo[]> {
   } catch (error) {
     console.error("Failed to fetch approved venues:", error);
     return [];
+  }
+}
+
+// Action to log a share event
+export async function logShareEventAction(
+  screeningId: string,
+  shareType: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await db.createShareEvent(screeningId, shareType);
+    if (success) {
+      return { success: true };
+    }
+    return { success: false, error: 'Failed to create share event.' };
+  } catch (error) {
+    console.error('Error logging share event:', error);
+    return { success: false, error: 'Internal server error.' };
   }
 }

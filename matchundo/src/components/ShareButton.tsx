@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 import { trackEvent } from "@/lib/analytics";
 import { APP_URL } from "@/lib/config";
 import { formatScreeningDate } from "@/lib/date";
+import { logShareEventAction } from "@/app/actions";
 
 interface ShareButtonProps {
   screeningId: string;
@@ -71,6 +72,7 @@ export function ShareButton({
       setCopied(true);
       triggerToast("Link copied to clipboard", "success");
       trackEvent("copy_link", { screeningId, timestamp: new Date().toISOString() });
+      logShareEventAction(screeningId, "copy_link").catch(err => console.error("Error logging share event:", err));
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Copy failed:", err);
@@ -93,6 +95,7 @@ ${shareUrl}`;
     const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank", "noopener,noreferrer");
     trackEvent("whatsapp_share", { screeningId, timestamp: new Date().toISOString() });
+    logShareEventAction(screeningId, "whatsapp_share").catch(err => console.error("Error logging share event:", err));
   };
 
   const handleNativeShare = async () => {
@@ -106,6 +109,7 @@ ${shareUrl}`;
           url: shareUrl,
         });
         trackEvent("native_share", { screeningId, timestamp: new Date().toISOString() });
+        logShareEventAction(screeningId, "native_share").catch(err => console.error("Error logging share event:", err));
       } catch (err) {
         // ShareSheet cancellation is normal and returns AbortError, don't show toast for it
         if (err instanceof Error && err.name !== "AbortError") {

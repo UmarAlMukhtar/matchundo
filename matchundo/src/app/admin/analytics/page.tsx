@@ -3,8 +3,20 @@ import { redirect } from "next/navigation";
 import { checkAdminAuth } from "@/app/actions";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
-import { BarChart3, Database, ShieldAlert, CheckSquare, Layers, MapPin, Activity, Clock } from "lucide-react";
-import { formatScreeningDate } from "@/lib/date";
+import { 
+  Layers, 
+  CheckCircle2, 
+  AlertTriangle, 
+  XCircle, 
+  MapPin, 
+  FileText, 
+  Globe, 
+  Share2, 
+  ExternalLink,
+  MessageSquare,
+  Link as LinkIcon,
+  Smartphone
+} from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -15,248 +27,438 @@ export default async function AdminAnalyticsPage() {
     redirect("/admin");
   }
 
-  // Fetch all screenings and events
+  // Fetch data directly from the database
   const screenings = await db.getScreenings();
-  const moderationEvents = await db.getModerationEvents();
+  const reports = await db.getReports();
+  const shareEvents = await db.getShareEvents();
 
-  // Create id -> matchName mapping for logs table
-  const screeningMap = new Map(screenings.map(s => [s.id, s.match_name]));
+  // --- SECTION 1: Platform Overview ---
+  const totalScreenings = screenings.length;
+  const approvedScreenings = screenings.filter(s => s.status === "approved").length;
+  const pendingSubmissions = screenings.filter(s => s.status === "pending").length;
+  const rejectedSubmissions = screenings.filter(s => s.status === "rejected").length;
+  
+  const approvedScreeningsList = screenings.filter(s => s.status === "approved");
+  const venueSet = new Set(approvedScreeningsList.map(s => s.venue_name.trim().toLowerCase()));
+  const totalVenues = venueSet.size;
+  
+  const totalReports = reports.length;
 
-  // Metrics calculations
-  const totalSubmissions = screenings.length;
-  const approved = screenings.filter(s => s.status === "approved").length;
-  const pending = screenings.filter(s => s.status === "pending").length;
-  const rejected = screenings.filter(s => s.status === "rejected").length;
+  // --- SECTION 2: Community Activity ---
+  
+  // 1. Top Cities
+  const cityStatsMap = new Map<string, { approved: number; total: number }>();
+  screenings.forEach(s => {
+    const city = s.city.trim();
+    if (!city) return;
+    const stats = cityStatsMap.get(city) || { approved: 0, total: 0 };
+    stats.total += 1;
+    if (s.status === "approved") {
+      stats.approved += 1;
+    }
+    cityStatsMap.set(city, stats);
+  });
 
-  const totalClosed = approved + rejected;
-  const approvalRate = totalClosed > 0 ? Math.round((approved / totalClosed) * 100) : 100;
+  const topCities = Array.from(cityStatsMap.entries())
+    .map(([name, stats]) => ({ name, ...stats }))
+    .sort((a, b) => b.approved - a.approved || b.total - a.total);
 
-  // Extract unique venues count from approved screenings
-  const venueSet = new Set(screenings.filter(s => s.status === "approved").map(s => s.venue_name.toLowerCase().trim()));
-  const uniqueVenues = venueSet.size;
+  // 2. Top Venues
+  const venueStatsMap = new Map<string, { name: string; city: string; count: number }>();
+  approvedScreeningsList.forEach(s => {
+    const key = `${s.venue_name.trim().toLowerCase()}||${s.city.trim().toLowerCase()}`;
+    const stats = venueStatsMap.get(key) || { name: s.venue_name, city: s.city, count: 0 };
+    stats.count += 1;
+    venueStatsMap.set(key, stats);
+  });
 
-  // Submission growth by week (for last 4 weeks)
+  const topVenues = Array.from(venueStatsMap.values())
+    .sort((a, b) => b.count - a.count);
+
+  // 3. Most Shared Screenings
+  const shareStatsMap = new Map<string, { whatsapp: number; copyLink: number; native: number; total: number }>();
+  shareEvents.forEach(e => {
+    const stats = shareStatsMap.get(e.screening_id) || { whatsapp: 0, copyLink: 0, native: 0, total: 0 };
+    stats.total += 1;
+    if (e.share_type === 'whatsapp_share') {
+      stats.whatsapp += 1;
+    } else if (e.share_type === 'copy_link') {
+      stats.copyLink += 1;
+    } else if (e.share_type === 'native_share') {
+      stats.native += 1;
+    }
+    shareStatsMap.set(e.screening_id, stats);
+  });
+
+  const mostShared = Array.from(shareStatsMap.entries())
+    .map(([screeningId, stats]) => {
+      const screening = screenings.find(s => s.id === screeningId);
+      return {
+        id: screeningId,
+        matchName: screening?.match_name || "Deleted Screening",
+        venueName: screening?.venue_name || "Unknown Venue",
+        ...stats
+      };
+    })
+    .sort((a, b) => b.total - a.total);
+
+  // --- SECTION 3: Growth Metrics ---
   const now = new Date();
-  const getSubmissionsInInterval = (daysStart: number, daysEnd: number) => {
-    const start = new Date(now.getTime() - daysStart * 24 * 60 * 60 * 1000);
-    const end = new Date(now.getTime() - daysEnd * 24 * 60 * 60 * 1000);
-    
-    return screenings.filter(s => {
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const getGrowthMetrics = (startDate: Date) => {
+    const newSubmissions = screenings.filter(s => {
       const created = s.created_at ? new Date(s.created_at) : new Date();
-      return created >= start && created < end;
+      return created >= startDate;
     }).length;
+
+    const approved = screenings.filter(s => {
+      if (s.status !== "approved" || !s.reviewed_at) return false;
+      const reviewed = new Date(s.reviewed_at);
+      return reviewed >= startDate;
+    }).length;
+
+    const rejected = screenings.filter(s => {
+      if (s.status !== "rejected" || !s.reviewed_at) return false;
+      const reviewed = new Date(s.reviewed_at);
+      return reviewed >= startDate;
+    }).length;
+
+    const userReports = reports.filter(r => {
+      const created = r.created_at ? new Date(r.created_at) : new Date();
+      return created >= startDate;
+    }).length;
+
+    return { newSubmissions, approved, rejected, userReports };
   };
 
-  const week1 = getSubmissionsInInterval(7, 0);   // Last 7 days
-  const week2 = getSubmissionsInInterval(14, 7);  // 8-14 days ago
-  const week3 = getSubmissionsInInterval(21, 14); // 15-21 days ago
-  const week4 = getSubmissionsInInterval(28, 21); // 22-28 days ago
+  const last7Days = getGrowthMetrics(sevenDaysAgo);
+  const last30Days = getGrowthMetrics(thirtyDaysAgo);
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 py-8 flex-1 flex flex-col">
+    <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-8 flex-1 flex flex-col space-y-10">
+      
       {/* Header */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
-            Analytics & Product Metrics
-          </h1>
-          <p className="text-zinc-550 text-[11px] mt-0.5">
-            Key database performance indices, approval rates, and moderation logs.
-          </p>
-        </div>
-        <div className="text-[11px] text-zinc-500 font-semibold bg-zinc-950 border border-zinc-900 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-          <Activity className="h-3.5 w-3.5 text-emerald-500" />
-          <span>Real-time DB connection active</span>
-        </div>
+      <div>
+        <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+          Analytics Dashboard
+        </h1>
+        <p className="text-zinc-550 text-[11px] mt-0.5 font-semibold">
+          Actionable business KPIs, community activity, and content sharing patterns.
+        </p>
       </div>
 
-      {/* Summary Metrics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        
-        {/* Total Submissions */}
-        <Card className="border-zinc-900 bg-zinc-950/40 p-4">
-          <div className="flex items-center justify-between text-zinc-500 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Total Submissions</span>
-            <Layers className="h-4 w-4 text-zinc-650" />
-          </div>
-          <div className="text-2xl font-bold text-white">{totalSubmissions}</div>
-          <p className="text-[9px] text-zinc-500 mt-1">Approved, pending & rejected</p>
-        </Card>
-
-        {/* Pending Backlog */}
-        <Card className="border-zinc-900 bg-zinc-950/40 p-4">
-          <div className="flex items-center justify-between text-zinc-500 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Pending Backlog</span>
-            <ShieldAlert className="h-4 w-4 text-amber-500/80" />
-          </div>
-          <div className="text-2xl font-bold text-white">{pending}</div>
-          <p className="text-[9px] text-zinc-500 mt-1">Awaiting moderation review</p>
-        </Card>
-
-        {/* Approval Rate */}
-        <Card className="border-zinc-900 bg-zinc-950/40 p-4">
-          <div className="flex items-center justify-between text-zinc-500 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Approval Rate</span>
-            <CheckSquare className="h-4 w-4 text-emerald-500/80" />
-          </div>
-          <div className="text-2xl font-bold text-white">{approvalRate}%</div>
-          <p className="text-[9px] text-zinc-500 mt-1">{approved} approved, {rejected} rejected</p>
-        </Card>
-
-        {/* Unique Venues */}
-        <Card className="border-zinc-900 bg-zinc-950/40 p-4">
-          <div className="flex items-center justify-between text-zinc-500 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Unique Venues</span>
-            <MapPin className="h-4 w-4 text-zinc-650" />
-          </div>
-          <div className="text-2xl font-bold text-white">{uniqueVenues}</div>
-          <p className="text-[9px] text-zinc-500 mt-1">Football screening locations</p>
-        </Card>
-
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start mb-8">
-        
-        {/* Weekly Submissions chart card (left) */}
-        <div className="md:col-span-4 w-full">
-          <Card className="border-zinc-900 bg-zinc-950/40 p-5">
-            <div className="flex items-center gap-1.5 mb-4 border-b border-zinc-900 pb-2">
-              <BarChart3 className="h-4 w-4 text-zinc-400" />
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider">Weekly Submissions</h2>
+      {/* SECTION 1: Platform Overview */}
+      <div className="space-y-4">
+        <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+          Platform Overview
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+          
+          {/* Total Screenings */}
+          <Card className="border-zinc-900 bg-zinc-950/40 p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-zinc-500 mb-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Total Screenings</span>
+              <Layers className="h-4 w-4 text-zinc-400" />
             </div>
-            
-            <div className="space-y-4 pt-2">
-              {/* Week 1 */}
-              <div>
-                <div className="flex justify-between text-[10px] text-zinc-400 mb-1">
-                  <span>Week 1 (Current)</span>
-                  <span className="font-bold">{week1}</span>
-                </div>
-                <div className="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, week1 * 10)}%` }} />
-                </div>
-              </div>
-
-              {/* Week 2 */}
-              <div>
-                <div className="flex justify-between text-[10px] text-zinc-400 mb-1">
-                  <span>Week 2</span>
-                  <span className="font-bold">{week2}</span>
-                </div>
-                <div className="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-zinc-700 h-full rounded-full" style={{ width: `${Math.min(100, week2 * 10)}%` }} />
-                </div>
-              </div>
-
-              {/* Week 3 */}
-              <div>
-                <div className="flex justify-between text-[10px] text-zinc-400 mb-1">
-                  <span>Week 3</span>
-                  <span className="font-bold">{week3}</span>
-                </div>
-                <div className="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-zinc-700 h-full rounded-full" style={{ width: `${Math.min(100, week3 * 10)}%` }} />
-                </div>
-              </div>
-
-              {/* Week 4 */}
-              <div>
-                <div className="flex justify-between text-[10px] text-zinc-400 mb-1">
-                  <span>Week 4</span>
-                  <span className="font-bold">{week4}</span>
-                </div>
-                <div className="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-zinc-700 h-full rounded-full" style={{ width: `${Math.min(100, week4 * 10)}%` }} />
-                </div>
-              </div>
+            <div>
+              <div className="text-2xl font-bold text-white">{totalScreenings}</div>
+              <p className="text-[9px] text-zinc-650 mt-1">All database records</p>
             </div>
           </Card>
-        </div>
 
-        {/* Moderation audit log table (right) */}
-        <div className="md:col-span-8 w-full">
-          <Card className="border-zinc-900 bg-zinc-950/40 p-5 overflow-hidden">
-            <div className="flex items-center gap-1.5 mb-4 border-b border-zinc-900 pb-2">
-              <Clock className="h-4 w-4 text-zinc-400" />
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider">Moderation History Log</h2>
+          {/* Approved Screenings */}
+          <Card className="border-zinc-900 bg-zinc-950/40 p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-zinc-500 mb-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Approved</span>
+              <CheckCircle2 className="h-4 w-4 text-emerald-500/80" />
             </div>
+            <div>
+              <div className="text-2xl font-bold text-white">{approvedScreenings}</div>
+              <p className="text-[9px] text-zinc-650 mt-1">Live on discovery page</p>
+            </div>
+          </Card>
 
-            {moderationEvents.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-[10px]">
-                  <thead>
-                    <tr className="border-b border-zinc-900 text-zinc-500 uppercase tracking-wider font-bold">
-                      <th className="py-2.5 px-2">Action</th>
-                      <th className="py-2.5 px-2">Screening Name</th>
-                      <th className="py-2.5 px-2">Timestamp</th>
-                      <th className="py-2.5 px-2">Details</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-900/60 text-zinc-400">
-                    {moderationEvents.slice(0, 10).map((event) => {
-                      const screeningName = screeningMap.get(event.screening_id) || "Deleted Screening";
-                      
-                      let actionColor = "text-amber-500 bg-amber-950/10 border border-amber-900/20";
-                      let actionLabel = "Submission Created";
+          {/* Pending Submissions */}
+          <Card className="border-zinc-900 bg-zinc-950/40 p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-zinc-500 mb-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Pending</span>
+              <AlertTriangle className="h-4 w-4 text-amber-500/80" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-white">{pendingSubmissions}</div>
+              <p className="text-[9px] text-zinc-650 mt-1">Awaiting moderation</p>
+            </div>
+          </Card>
 
-                      if (event.action === "submission_approved") {
-                        actionColor = "text-emerald-500 bg-emerald-950/10 border border-emerald-900/20";
-                        actionLabel = "Approved";
-                      } else if (event.action === "submission_rejected") {
-                        actionColor = "text-red-400 bg-red-950/10 border border-red-900/20";
-                        actionLabel = "Rejected";
-                      }
+          {/* Rejected Submissions */}
+          <Card className="border-zinc-900 bg-zinc-950/40 p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-zinc-500 mb-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Rejected</span>
+              <XCircle className="h-4 w-4 text-red-500/80" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-white">{rejectedSubmissions}</div>
+              <p className="text-[9px] text-zinc-650 mt-1">Declined listings</p>
+            </div>
+          </Card>
 
-                      return (
-                        <tr key={event.id} className="hover:bg-zinc-900/10 transition-colors">
-                          <td className="py-2.5 px-2 font-medium">
-                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${actionColor}`}>
-                              {actionLabel}
+          {/* Total Venues */}
+          <Card className="border-zinc-900 bg-zinc-950/40 p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-zinc-500 mb-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Total Venues</span>
+              <MapPin className="h-4 w-4 text-zinc-400" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-white">{totalVenues}</div>
+              <p className="text-[9px] text-zinc-650 mt-1">Unique physical host venues</p>
+            </div>
+          </Card>
+
+          {/* Total User Reports */}
+          <Card className="border-zinc-900 bg-zinc-950/40 p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-zinc-500 mb-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider">User Reports</span>
+              <FileText className="h-4 w-4 text-red-400/80" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-white">{totalReports}</div>
+              <p className="text-[9px] text-zinc-650 mt-1">Flagged by community</p>
+            </div>
+          </Card>
+
+        </div>
+      </div>
+
+      {/* SECTION 2: Community Activity */}
+      <div className="space-y-4">
+        <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+          Community Activity
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+          
+          {/* Top Cities List (5 cols) */}
+          <div className="md:col-span-5 w-full">
+            <Card className="border-zinc-900 bg-zinc-950/40 p-5 space-y-4">
+              <div className="flex items-center gap-2 border-b border-zinc-900 pb-2">
+                <Globe className="h-4 w-4 text-zinc-400" />
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">Top Cities</h3>
+              </div>
+
+              {topCities.length > 0 ? (
+                <div className="space-y-4 pt-1">
+                  {topCities.slice(0, 10).map((city, idx) => (
+                    <div key={city.name} className="flex items-center justify-between text-[11px] border-b border-zinc-900/40 pb-2 last:border-0 last:pb-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono text-zinc-600 font-bold w-4">{idx + 1}.</span>
+                        <span className="font-semibold text-zinc-200">{city.name}</span>
+                      </div>
+                      <div className="flex gap-4 text-right">
+                        <div>
+                          <span className="text-zinc-500 block text-[9px] uppercase tracking-wider">Approved Screenings</span>
+                          <span className="font-mono font-bold text-white text-xs">{city.approved}</span>
+                        </div>
+                        <div>
+                          <span className="text-zinc-500 block text-[9px] uppercase tracking-wider font-semibold">Submissions</span>
+                          <span className="font-mono font-bold text-zinc-400 text-xs">{city.total}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[10px] text-zinc-650 text-center py-6">No city data available.</p>
+              )}
+            </Card>
+          </div>
+
+          {/* Top Venues List (7 cols) */}
+          <div className="md:col-span-7 w-full">
+            <Card className="border-zinc-900 bg-zinc-950/40 p-5 space-y-4">
+              <div className="flex items-center gap-2 border-b border-zinc-900 pb-2">
+                <MapPin className="h-4 w-4 text-zinc-400" />
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">Top Venues</h3>
+              </div>
+
+              {topVenues.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-[11px]">
+                    <thead>
+                      <tr className="border-b border-zinc-900 text-zinc-500 uppercase tracking-wider font-bold text-[9px]">
+                        <th className="py-2 px-1 w-8">Rank</th>
+                        <th className="py-2 px-2">Venue Name</th>
+                        <th className="py-2 px-2">City</th>
+                        <th className="py-2 px-2 text-right">Number of Screenings</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-900/40 text-zinc-400">
+                      {topVenues.slice(0, 8).map((venue, idx) => (
+                        <tr key={`${venue.name}-${venue.city}`} className="hover:bg-zinc-900/10 transition-colors">
+                          <td className="py-2.5 px-1 font-mono text-zinc-600 font-bold">{idx + 1}.</td>
+                          <td className="py-2.5 px-2 font-semibold text-zinc-200">{venue.name}</td>
+                          <td className="py-2.5 px-2 text-zinc-500">{venue.city}</td>
+                          <td className="py-2.5 px-2 text-right font-mono font-bold text-white">{venue.count}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-[10px] text-zinc-650 text-center py-6">No venue data available.</p>
+              )}
+            </Card>
+          </div>
+
+          {/* Most Shared Screenings Table (12 cols) */}
+          <div className="md:col-span-12 w-full">
+            <Card className="border-zinc-900 bg-zinc-950/40 p-5 space-y-4">
+              <div className="flex items-center gap-2 border-b border-zinc-900 pb-2">
+                <Share2 className="h-4 w-4 text-zinc-400" />
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">Most Shared Screenings</h3>
+              </div>
+
+              {mostShared.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-[11px]">
+                    <thead>
+                      <tr className="border-b border-zinc-900 text-zinc-500 uppercase tracking-wider font-bold text-[9px]">
+                        <th className="py-2 px-2">Match Name</th>
+                        <th className="py-2 px-2">Venue Name</th>
+                        <th className="py-2 px-2 text-center">WhatsApp Shares</th>
+                        <th className="py-2 px-2 text-center">Copy Link Shares</th>
+                        <th className="py-2 px-2 text-center">Native Shares</th>
+                        <th className="py-2 px-2 text-right">Total Shares</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-900/40 text-zinc-400">
+                      {mostShared.slice(0, 10).map((item) => (
+                        <tr key={item.id} className="hover:bg-zinc-900/10 transition-colors">
+                          <td className="py-2.5 px-2 font-semibold text-zinc-200 max-w-[200px] truncate">{item.matchName}</td>
+                          <td className="py-2.5 px-2 text-zinc-500">{item.venueName}</td>
+                          <td className="py-2.5 px-2 text-center">
+                            <span className="inline-flex items-center gap-1 justify-center w-full">
+                              <MessageSquare className="h-3.5 w-3.5 text-emerald-600/70 shrink-0" />
+                              <span className="font-mono text-zinc-350">{item.whatsapp}</span>
                             </span>
                           </td>
-                          <td className="py-2.5 px-2 font-semibold text-zinc-200 max-w-[150px] truncate">
-                            {screeningName}
+                          <td className="py-2.5 px-2 text-center">
+                            <span className="inline-flex items-center gap-1 justify-center w-full">
+                              <LinkIcon className="h-3.5 w-3.5 text-blue-500/70 shrink-0" />
+                              <span className="font-mono text-zinc-350">{item.copyLink}</span>
+                            </span>
                           </td>
-                          <td className="py-2.5 px-2 text-zinc-500">
-                            {formatScreeningDate(event.created_at, {
-                              day: "2-digit",
-                              month: "short",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              hour12: true
-                            })}
+                          <td className="py-2.5 px-2 text-center">
+                            <span className="inline-flex items-center gap-1 justify-center w-full">
+                              <Smartphone className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
+                              <span className="font-mono text-zinc-350">{item.native}</span>
+                            </span>
                           </td>
-                          <td className="py-2.5 px-2 text-zinc-500 max-w-[200px] truncate">
-                            {event.notes || "-"}
-                          </td>
+                          <td className="py-2.5 px-2 text-right font-mono font-bold text-emerald-400 text-xs">{item.total}</td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="p-8 text-center rounded bg-zinc-950/20 border border-zinc-900/60">
-                <p className="text-zinc-650">No moderation history recorded in the database.</p>
-              </div>
-            )}
-          </Card>
-        </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-[10px] text-zinc-650 text-center py-8">
+                  No share metrics recorded yet. Share screening pages to populate.
+                </p>
+              )}
+            </Card>
+          </div>
 
+        </div>
       </div>
 
-      {/* Third Party Analytics Integration Info block */}
-      <Card className="border-zinc-900 bg-zinc-950/40 p-5">
-        <div className="flex gap-3 text-xs">
-          <Database className="h-5 w-5 text-zinc-550 shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-bold text-zinc-200">Third-Party Analytics Platform</h3>
-            <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
-              We track moderation milestones (user submissions, approvals, rejections) internally in the database. For page views, clicks, and search engine telemetry, general-purpose hook interfaces are pre-integrated in server component routing loaders. Connect a third-party metrics engine (such as Mixpanel or Vercel Analytics) inside <code className="text-zinc-400 font-mono">src/lib/analytics.ts</code> to instantly map external event charts.
-            </p>
-          </div>
+      {/* SECTION 3: Growth Metrics */}
+      <div className="space-y-4">
+        <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+          Growth Metrics
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          {/* Last 7 Days */}
+          <Card className="border-zinc-900 bg-zinc-950/40 p-5 space-y-4">
+            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+              Last 7 Days Activity
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="border border-zinc-900/60 rounded p-3 bg-zinc-950/20">
+                <span className="text-[9px] text-zinc-550 uppercase font-bold block">New Submissions</span>
+                <span className="text-lg font-bold text-white font-mono mt-0.5 block">{last7Days.newSubmissions}</span>
+              </div>
+              <div className="border border-zinc-900/60 rounded p-3 bg-zinc-950/20">
+                <span className="text-[9px] text-zinc-550 uppercase font-bold block">Approved Listings</span>
+                <span className="text-lg font-bold text-emerald-400 font-mono mt-0.5 block">{last7Days.approved}</span>
+              </div>
+              <div className="border border-zinc-900/60 rounded p-3 bg-zinc-950/20">
+                <span className="text-[9px] text-zinc-550 uppercase font-bold block">Rejected Listings</span>
+                <span className="text-lg font-bold text-red-400 font-mono mt-0.5 block">{last7Days.rejected}</span>
+              </div>
+              <div className="border border-zinc-900/60 rounded p-3 bg-zinc-950/20">
+                <span className="text-[9px] text-zinc-550 uppercase font-bold block">User Reports</span>
+                <span className="text-lg font-bold text-zinc-300 font-mono mt-0.5 block">{last7Days.userReports}</span>
+              </div>
+            </div>
+          </Card>
+
+          {/* Last 30 Days */}
+          <Card className="border-zinc-900 bg-zinc-950/40 p-5 space-y-4">
+            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+              Last 30 Days Activity
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="border border-zinc-900/60 rounded p-3 bg-zinc-950/20">
+                <span className="text-[9px] text-zinc-550 uppercase font-bold block">New Submissions</span>
+                <span className="text-lg font-bold text-white font-mono mt-0.5 block">{last30Days.newSubmissions}</span>
+              </div>
+              <div className="border border-zinc-900/60 rounded p-3 bg-zinc-950/20">
+                <span className="text-[9px] text-zinc-550 uppercase font-bold block">Approved Listings</span>
+                <span className="text-lg font-bold text-emerald-400 font-mono mt-0.5 block">{last30Days.approved}</span>
+              </div>
+              <div className="border border-zinc-900/60 rounded p-3 bg-zinc-950/20">
+                <span className="text-[9px] text-zinc-550 uppercase font-bold block">Rejected Listings</span>
+                <span className="text-lg font-bold text-red-400 font-mono mt-0.5 block">{last30Days.rejected}</span>
+              </div>
+              <div className="border border-zinc-900/60 rounded p-3 bg-zinc-950/20">
+                <span className="text-[9px] text-zinc-550 uppercase font-bold block">User Reports</span>
+                <span className="text-lg font-bold text-zinc-300 font-mono mt-0.5 block">{last30Days.userReports}</span>
+              </div>
+            </div>
+          </Card>
+
         </div>
+      </div>
+
+      {/* SECTION 4: Traffic Analytics (Cloudflare Integration) */}
+      <Card className="border-zinc-900 bg-zinc-950/40 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="space-y-1">
+          <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+            Traffic Analytics
+          </h3>
+          <p className="text-[10px] text-zinc-550">
+            Powered by Cloudflare Web Analytics
+          </p>
+          <p className="text-[11px] text-zinc-500 leading-relaxed max-w-xl">
+            Traffic, visitors, referrers, top pages, geography, and browser telemetry are managed directly within Cloudflare.
+          </p>
+        </div>
+        <a 
+          href="https://dash.cloudflare.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0"
+        >
+          <button className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-bold text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-850 transition-colors cursor-pointer">
+            Open Cloudflare Analytics
+            <ExternalLink className="h-3 w-3" />
+          </button>
+        </a>
       </Card>
+
     </div>
   );
 }
